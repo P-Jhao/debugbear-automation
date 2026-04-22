@@ -2,6 +2,12 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  components: [
+    {
+      path: '~/components',
+      pathPrefix: false
+    }
+  ],
   modules: ['@pinia/nuxt'],
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
