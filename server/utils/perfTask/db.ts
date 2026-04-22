@@ -1,10 +1,10 @@
-import Database from 'better-sqlite3'
 import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 
-let dbInstance: Database.Database | null = null
+let dbInstance: DatabaseSync | null = null
 
-const ensureSchema = (db: Database.Database) => {
+const ensureSchema = (db: DatabaseSync) => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS perf_tasks (
       task_id TEXT PRIMARY KEY,
@@ -61,8 +61,8 @@ export const getPerfTaskDb = () => {
 
   const dbPath = resolve(process.cwd(), '.data', 'perf-tasks.db')
   mkdirSync(dirname(dbPath), { recursive: true })
-  const db = new Database(dbPath)
-  db.pragma('journal_mode = WAL')
+  const db = new DatabaseSync(dbPath)
+  db.exec('PRAGMA journal_mode = WAL;')
   ensureSchema(db)
   dbInstance = db
   return dbInstance
