@@ -70,6 +70,9 @@ onBeforeUnmount(() => {
         <div class="text-muted">
           版本: {{ store.currentTask.version }} | 分组: {{ store.currentTask.group }}
         </div>
+        <p v-if="store.currentTask.errorMessage" class="error-text">
+          失败原因：{{ store.currentTask.errorMessage }}
+        </p>
       </div>
     </section>
 

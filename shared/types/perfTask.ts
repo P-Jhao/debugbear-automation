@@ -59,6 +59,7 @@ export interface PerfTaskListItem {
   progressCount: number
   successCount: number
   failCount: number
+  errorMessage: string | null
   createdAt: string
   updatedAt: string
 }

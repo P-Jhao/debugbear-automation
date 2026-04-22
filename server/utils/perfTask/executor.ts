@@ -1,6 +1,7 @@
 import type { PerfTaskRunItem, PerfTaskStatus } from '~/shared/types/perfTask'
 import { getPerfTaskConfig } from './config'
 import { runDebugBearAnalysis } from './debugbearClient'
+import { perfTaskLog, toTaskErrorMessage } from './logger'
 import {
   appendPerfTaskRun,
   finalizePerfTask,
@@ -37,10 +38,17 @@ const runSingleWithRetry = async (url: string, retryCount: number) => {
 
   while (attempt <= retryCount) {
     try {
+      perfTaskLog.debug('run attempt start', { attempt: attempt + 1, url })
       return await runDebugBearAnalysis(url)
     } catch (error) {
       lastError = error
       attempt += 1
+      perfTaskLog.warn('run attempt failed', {
+        attempt,
+        retryCount,
+        url,
+        error: toTaskErrorMessage(error, '调用 DebugBear 失败')
+      })
       if (attempt > retryCount) {
         throw lastError
       }
@@ -52,22 +60,33 @@ const runSingleWithRetry = async (url: string, retryCount: number) => {
 
 export const startPerfTaskExecution = (taskId: string) => {
   if (runningTaskIds.has(taskId)) {
+    perfTaskLog.warn('skip start: task already running', { taskId })
     return
   }
 
   runningTaskIds.add(taskId)
+  perfTaskLog.info('task execution scheduled', { taskId })
   void executePerfTask(taskId).finally(() => {
     runningTaskIds.delete(taskId)
+    perfTaskLog.info('task execution released lock', { taskId })
   })
 }
 
 const executePerfTask = async (taskId: string) => {
   const taskMeta = getTaskMeta(taskId)
   if (!taskMeta) {
+    perfTaskLog.error('task meta not found', undefined, { taskId })
     return
   }
 
   const config = getPerfTaskConfig()
+  perfTaskLog.info('task execution start', {
+    taskId,
+    url: taskMeta.url,
+    count: taskMeta.count,
+    concurrency: config.concurrency,
+    retryCount: config.retryCount
+  })
   markPerfTaskRunning(taskId)
 
   try {
@@ -88,6 +107,12 @@ const executePerfTask = async (taskId: string) => {
           createdAt
         }
         appendPerfTaskRun(taskId, run)
+        perfTaskLog.info('task run success', {
+          taskId,
+          runIndex: run.runIndex,
+          runId: run.runId,
+          debugBearUrl: run.debugBearUrl
+        })
       } catch (error) {
         const run: PerfTaskRunItem = {
           runIndex: index + 1,
@@ -102,6 +127,10 @@ const executePerfTask = async (taskId: string) => {
           createdAt
         }
         appendPerfTaskRun(taskId, run)
+        perfTaskLog.error('task run failed', error, {
+          taskId,
+          runIndex: run.runIndex
+        })
       }
     })
 
@@ -124,8 +153,15 @@ const executePerfTask = async (taskId: string) => {
     }
 
     finalizePerfTask(taskId, finalStatus, summary)
+    perfTaskLog.info('task execution finished', {
+      taskId,
+      finalStatus,
+      successCount: summary.successCount,
+      failCount: summary.failCount
+    })
   } catch (error) {
-    const message = error instanceof Error ? error.message : '任务执行失败'
+    const message = toTaskErrorMessage(error, '任务执行失败')
     markPerfTaskFailed(taskId, message)
+    perfTaskLog.error('task execution aborted', error, { taskId })
   }
 }

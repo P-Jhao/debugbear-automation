@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { CreatePerfTaskRequest } from '~/shared/types/perfTask'
 import { getPerfTaskConfig } from '~~/server/utils/perfTask/config'
 import { startPerfTaskExecution } from '~~/server/utils/perfTask/executor'
+import { perfTaskLog } from '~~/server/utils/perfTask/logger'
 import { createPerfTask } from '~~/server/utils/perfTask/repository'
 
 const requestSchema = z.object({
@@ -51,6 +52,13 @@ export default defineEventHandler(async (event) => {
   }
 
   const taskId = createPerfTask(payload)
+  perfTaskLog.info('task created', {
+    taskId,
+    url: payload.url,
+    count: payload.count,
+    version: payload.version,
+    group: payload.group
+  })
   startPerfTaskExecution(taskId)
 
   return {

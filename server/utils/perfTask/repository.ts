@@ -20,6 +20,7 @@ interface PerfTaskRow {
   progress_count: number
   success_count: number
   fail_count: number
+  error_message: string | null
   summary_json: string | null
   remark: string | null
   created_at: string
@@ -49,6 +50,7 @@ const toListItem = (row: PerfTaskRow): PerfTaskListItem => ({
   progressCount: row.progress_count,
   successCount: row.success_count,
   failCount: row.fail_count,
+  errorMessage: row.error_message,
   createdAt: row.created_at,
   updatedAt: row.updated_at
 })
@@ -163,6 +165,7 @@ export const listPerfTasks = (filters: PerfTaskFilters): PerfTaskListItem[] => {
         progress_count,
         success_count,
         fail_count,
+        error_message,
         summary_json,
         remark,
         created_at,
@@ -193,6 +196,7 @@ export const getPerfTaskDetail = (taskId: string): PerfTaskDetailResponse | null
         progress_count,
         success_count,
         fail_count,
+        error_message,
         summary_json,
         remark,
         created_at,
@@ -272,7 +276,8 @@ export const markPerfTaskFailed = (taskId: string, message: string) => {
 
 export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
   const db = getPerfTaskDb()
-  const tx = db.transaction(() => {
+  db.exec('BEGIN;')
+  try {
     db.prepare(
       `
       INSERT INTO perf_task_runs (
@@ -332,8 +337,11 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
       failDelta: run.status === 'failed' ? 1 : 0,
       updatedAt: new Date().toISOString()
     })
-  })
-  tx()
+    db.exec('COMMIT;')
+  } catch (error) {
+    db.exec('ROLLBACK;')
+    throw error
+  }
 }
 
 export const finalizePerfTask = (

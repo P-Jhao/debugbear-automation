@@ -1,5 +1,6 @@
 import { DebugBear } from 'debugbear'
 import { getPerfTaskConfig } from './config'
+import { perfTaskLog } from './logger'
 
 interface DebugBearMetricResult {
   runId: string | null
@@ -20,6 +21,7 @@ const getClient = () => {
 
   const config = getPerfTaskConfig()
   debugBearClient = new DebugBear(config.debugBearApiKey)
+  perfTaskLog.info('debugbear client initialized')
   return debugBearClient
 }
 
@@ -48,6 +50,7 @@ const parseRunIdFromUrl = (url: string | null): string | null => {
 export const runDebugBearAnalysis = async (url: string): Promise<DebugBearMetricResult> => {
   const pageId = await resolveDebugBearPageId(url)
   const client = getClient()
+  perfTaskLog.debug('start debugbear analyze', { url, pageId })
 
   const analysis = await client.pages.analyze(pageId, { url })
   const result = await analysis.waitForResult()
@@ -111,12 +114,14 @@ const createProjectPage = async (
 export const resolveDebugBearPageId = async (url: string): Promise<number> => {
   const config = getPerfTaskConfig()
   if (config.debugBearPageId) {
+    perfTaskLog.debug('use fixed page id from env', { pageId: config.debugBearPageId })
     return config.debugBearPageId
   }
 
   const normalizedUrl = normalizeUrl(url)
   const cached = pageIdCacheByUrl.get(normalizedUrl)
   if (cached) {
+    perfTaskLog.debug('reuse cached page id', { normalizedUrl, pageId: cached })
     return cached
   }
 
@@ -131,6 +136,10 @@ export const resolveDebugBearPageId = async (url: string): Promise<number> => {
     config.debugBearApiKey,
     config.debugBearApiBaseUrl
   )
+  perfTaskLog.debug('loaded project pages', {
+    projectId: config.debugBearProjectId,
+    count: project.pages?.length ?? 0
+  })
   const existing = (project.pages ?? []).find((item) => {
     if (!item.url) {
       return false
@@ -146,6 +155,10 @@ export const resolveDebugBearPageId = async (url: string): Promise<number> => {
     const parsed = Number(existing.id)
     if (Number.isInteger(parsed) && parsed > 0) {
       pageIdCacheByUrl.set(normalizedUrl, parsed)
+      perfTaskLog.info('found existing page for url', {
+        normalizedUrl,
+        pageId: parsed
+      })
       return parsed
     }
   }
@@ -163,5 +176,10 @@ export const resolveDebugBearPageId = async (url: string): Promise<number> => {
   }
 
   pageIdCacheByUrl.set(normalizedUrl, pageId)
+  perfTaskLog.info('created new debugbear page', {
+    normalizedUrl,
+    pageId,
+    projectId: config.debugBearProjectId
+  })
   return pageId
 }
