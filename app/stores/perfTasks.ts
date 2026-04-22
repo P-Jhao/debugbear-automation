@@ -9,6 +9,25 @@ import type {
 
 const TERMINAL_STATUSES = new Set<PerfTaskStatus>(['completed', 'partial_failed', 'failed'])
 
+const getReadableError = (error: unknown, fallback: string) => {
+  if (error && typeof error === 'object') {
+    const maybe = error as {
+      data?: { statusMessage?: string; message?: string }
+      statusMessage?: string
+      message?: string
+    }
+    return (
+      maybe.data?.statusMessage ??
+      maybe.statusMessage ??
+      maybe.data?.message ??
+      maybe.message ??
+      fallback
+    )
+  }
+
+  return fallback
+}
+
 export const usePerfTasksStore = defineStore('perfTasks', () => {
   const api = usePerfTasksApi()
   const tasks = ref<PerfTaskListItem[]>([])
@@ -26,7 +45,7 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
       tasks.value = data.items
       return data.items
     } catch (error) {
-      errorMessage.value = error instanceof Error ? error.message : '加载任务列表失败'
+      errorMessage.value = getReadableError(error, '加载任务列表失败')
       throw error
     } finally {
       loading.value = false
@@ -41,7 +60,7 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
       currentTask.value = data
       return data
     } catch (error) {
-      errorMessage.value = error instanceof Error ? error.message : '加载任务详情失败'
+      errorMessage.value = getReadableError(error, '加载任务详情失败')
       throw error
     } finally {
       loading.value = false
@@ -55,7 +74,7 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
       const data = await api.createTask(payload)
       return data.taskId
     } catch (error) {
-      errorMessage.value = error instanceof Error ? error.message : '创建任务失败'
+      errorMessage.value = getReadableError(error, '创建任务失败')
       throw error
     } finally {
       loading.value = false
