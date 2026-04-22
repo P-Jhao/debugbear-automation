@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import type { CreatePerfTaskRequest } from '~/shared/types/perfTask'
-import { getPerfTaskConfig } from '~/server/utils/perfTask/config'
-import { startPerfTaskExecution } from '~/server/utils/perfTask/executor'
-import { createPerfTask } from '~/server/utils/perfTask/repository'
+import { getPerfTaskConfig } from '~~/server/utils/perfTask/config'
+import { startPerfTaskExecution } from '~~/server/utils/perfTask/executor'
+import { createPerfTask } from '~~/server/utils/perfTask/repository'
 
 const requestSchema = z.object({
   url: z.string().url(),

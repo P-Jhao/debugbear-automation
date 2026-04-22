@@ -1,4 +1,4 @@
-import { listDistinctGroupsByVersion } from '~/server/utils/perfTask/repository'
+import { listDistinctGroupsByVersion } from '~~/server/utils/perfTask/repository'
 
 export default defineEventHandler((event) => {
   const version = getRouterParam(event, 'version')

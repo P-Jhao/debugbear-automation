@@ -1,4 +1,4 @@
-import { getPerfTaskDetail } from '~/server/utils/perfTask/repository'
+import { getPerfTaskDetail } from '~~/server/utils/perfTask/repository'
 
 export default defineEventHandler((event) => {
   const taskId = getRouterParam(event, 'taskId')

@@ -1,4 +1,4 @@
-import { listDistinctVersions } from '~/server/utils/perfTask/repository'
+import { listDistinctVersions } from '~~/server/utils/perfTask/repository'
 
 export default defineEventHandler(() => {
   return {

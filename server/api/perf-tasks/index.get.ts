@@ -1,5 +1,5 @@
 import type { PerfTaskFilters, PerfTaskStatus } from '~/shared/types/perfTask'
-import { listPerfTasks } from '~/server/utils/perfTask/repository'
+import { listPerfTasks } from '~~/server/utils/perfTask/repository'
 
 const statusSet = new Set<PerfTaskStatus>([
   'pending',
