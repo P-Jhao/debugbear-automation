@@ -20,7 +20,15 @@ const requestSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const config = getPerfTaskConfig()
+  let config: ReturnType<typeof getPerfTaskConfig>
+  try {
+    config = getPerfTaskConfig()
+  } catch (error) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: error instanceof Error ? error.message : '服务端配置错误'
+    })
+  }
   const body = await readBody(event)
   const parsed = requestSchema.safeParse(body)
 
