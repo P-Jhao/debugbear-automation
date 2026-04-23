@@ -11,6 +11,7 @@ interface DebugBearMetricResult {
   tbt: number | null
   cls: number | null
   ttfb: number | null
+  pageWeight: number | null
 }
 
 let debugBearClient: DebugBear | null = null
@@ -116,7 +117,8 @@ export const runDebugBearAnalysis = async (url: string): Promise<DebugBearMetric
     inp: pickMetric(metrics, ['performance.interactionToNextPaint', 'crux.inp.p75', 'inp']),
     tbt: pickMetric(metrics, ['performance.totalBlockingTime', 'crux.tbt.p75', 'tbt']),
     cls: pickMetric(metrics, ['performance.cumulativeLayoutShift', 'crux.cls.p75', 'cls']),
-    ttfb: pickMetric(metrics, ['performance.serverResponseTime', 'performance.timeToFirstByte', 'ttfb'])
+    ttfb: pickMetric(metrics, ['performance.serverResponseTime', 'performance.timeToFirstByte', 'ttfb']),
+    pageWeight: pickMetric(metrics, ['performance.pageWeight', 'pageWeight', 'pageweight'])
   }
 }
 

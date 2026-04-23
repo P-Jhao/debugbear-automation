@@ -57,16 +57,6 @@ const getMetric = (metric: MetricSummary | undefined): MetricSummary => {
       </div>
 
       <div>
-        <h3 class="section-subtitle">INP</h3>
-        <div class="metric-grid">
-          <div v-for="item in items(getMetric(summary.inp))" :key="`inp-${item.label}`" class="metric-card">
-            <div class="metric-label">{{ item.label }}</div>
-            <div class="metric-value">{{ item.value }}</div>
-          </div>
-        </div>
-      </div>
-
-      <div>
         <h3 class="section-subtitle">FCP</h3>
         <div class="metric-grid">
           <div v-for="item in items(getMetric(summary.fcp))" :key="`fcp-${item.label}`" class="metric-card">
@@ -100,6 +90,20 @@ const getMetric = (metric: MetricSummary | undefined): MetricSummary => {
         <h3 class="section-subtitle">TTFB</h3>
         <div class="metric-grid">
           <div v-for="item in items(getMetric(summary.ttfb))" :key="`ttfb-${item.label}`" class="metric-card">
+            <div class="metric-label">{{ item.label }}</div>
+            <div class="metric-value">{{ item.value }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="section-subtitle">Page Weight</h3>
+        <div class="metric-grid">
+          <div
+            v-for="item in items(getMetric(summary.pageWeight))"
+            :key="`pageWeight-${item.label}`"
+            class="metric-card"
+          >
             <div class="metric-label">{{ item.label }}</div>
             <div class="metric-value">{{ item.value }}</div>
           </div>

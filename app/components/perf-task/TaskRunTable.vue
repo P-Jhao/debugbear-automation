@@ -21,10 +21,10 @@ defineProps<{
             <th>状态</th>
             <th>LCP</th>
             <th>FCP</th>
-            <th>INP</th>
             <th>TBT</th>
             <th>CLS</th>
             <th>TTFB</th>
+            <th>Page Weight</th>
             <th>详情</th>
             <th>错误信息</th>
             <th>时间</th>
@@ -40,10 +40,10 @@ defineProps<{
             </td>
             <td>{{ run.lcp ?? '-' }}</td>
             <td>{{ run.fcp ?? '-' }}</td>
-            <td>{{ run.inp ?? '-' }}</td>
             <td>{{ run.tbt ?? '-' }}</td>
             <td>{{ run.cls ?? '-' }}</td>
             <td>{{ run.ttfb ?? '-' }}</td>
+            <td>{{ run.pageWeight ?? '-' }}</td>
             <td>
               <a v-if="run.debugBearUrl" :href="run.debugBearUrl" target="_blank" rel="noreferrer">
                 查看

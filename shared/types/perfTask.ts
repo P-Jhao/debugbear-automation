@@ -32,6 +32,7 @@ export interface PerfTaskRunItem {
   tbt: number | null
   cls: number | null
   ttfb: number | null
+  pageWeight: number | null
   errorMessage: string | null
   createdAt: string
 }
@@ -50,6 +51,7 @@ export interface PerfTaskSummary {
   tbt: MetricSummary
   cls: MetricSummary
   ttfb: MetricSummary
+  pageWeight: MetricSummary
   successCount: number
   failCount: number
 }

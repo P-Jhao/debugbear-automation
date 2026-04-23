@@ -139,6 +139,7 @@ const executePerfTask = async (taskId: string) => {
           tbt: result.tbt,
           cls: result.cls,
           ttfb: result.ttfb,
+          pageWeight: result.pageWeight,
           errorMessage: null,
           createdAt
         }
@@ -164,6 +165,7 @@ const executePerfTask = async (taskId: string) => {
           tbt: null,
           cls: null,
           ttfb: null,
+          pageWeight: null,
           errorMessage: error instanceof Error ? error.message : '调用 DebugBear 失败',
           createdAt
         }
@@ -184,6 +186,7 @@ const executePerfTask = async (taskId: string) => {
         tbt: run.tbt,
         cls: run.cls,
         ttfb: run.ttfb,
+        pageWeight: run.pageWeight,
         status: run.status
       }))
     )

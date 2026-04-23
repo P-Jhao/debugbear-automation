@@ -38,6 +38,7 @@ interface PerfTaskRunRow {
   tbt: number | null
   cls: number | null
   ttfb: number | null
+  page_weight: number | null
   error_message: string | null
   created_at: string
 }
@@ -71,6 +72,7 @@ const toRunItem = (row: PerfTaskRunRow): PerfTaskRunItem => ({
   tbt: row.tbt,
   cls: row.cls,
   ttfb: row.ttfb,
+  pageWeight: row.page_weight,
   errorMessage: row.error_message,
   createdAt: row.created_at
 })
@@ -115,6 +117,7 @@ const normalizeSummary = (summary: unknown): PerfTaskSummary | null => {
     tbt: normalizeMetricSummary(maybe.tbt),
     cls: normalizeMetricSummary(maybe.cls),
     ttfb: normalizeMetricSummary(maybe.ttfb),
+    pageWeight: normalizeMetricSummary(maybe.pageWeight),
     successCount: typeof maybe.successCount === 'number' ? maybe.successCount : 0,
     failCount: typeof maybe.failCount === 'number' ? maybe.failCount : 0
   }
@@ -277,6 +280,7 @@ export const getPerfTaskDetail = (taskId: string): PerfTaskDetailResponse | null
         tbt,
         cls,
         ttfb,
+        page_weight,
         error_message,
         created_at
       FROM perf_task_runs
@@ -364,6 +368,7 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
         tbt,
         cls,
         ttfb,
+        page_weight,
         error_message,
         created_at
       )
@@ -379,6 +384,7 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
         @tbt,
         @cls,
         @ttfb,
+        @pageWeight,
         @errorMessage,
         @createdAt
       );
@@ -395,6 +401,7 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
       tbt: run.tbt,
       cls: run.cls,
       ttfb: run.ttfb,
+      pageWeight: run.pageWeight,
       errorMessage: run.errorMessage,
       createdAt: run.createdAt
     })
@@ -474,6 +481,7 @@ export const listTaskRunsByTaskId = (taskId: string) => {
         tbt,
         cls,
         ttfb,
+        page_weight,
         error_message,
         created_at
       FROM perf_task_runs
