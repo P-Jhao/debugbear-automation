@@ -19,10 +19,16 @@ let timer: ReturnType<typeof setInterval> | null = null
 const statusLabelMap: Record<PerfTaskStatus, string> = {
   pending: '待执行',
   running: '执行中',
+  cancelled: '已中止',
   completed: '已完成',
   partial_failed: '部分失败',
   failed: '失败'
 }
+
+const canStopTask = computed(() => {
+  const status = store.currentTask?.status
+  return status === 'pending' || status === 'running'
+})
 
 const stopPolling = () => {
   if (timer) {
@@ -45,6 +51,20 @@ const startPolling = () => {
   }, pollInterval.value)
 }
 
+const handleStopTask = async () => {
+  if (!store.currentTask) {
+    return
+  }
+
+  if (!window.confirm('确认停止这个任务吗？当前已提交的请求可能会在本轮结束后停止。')) {
+    return
+  }
+
+  await store.stopTask(store.currentTask.taskId)
+  await loadDetail()
+  stopPolling()
+}
+
 await loadDetail()
 if (!store.isTerminalTask) {
   startPolling()
@@ -65,6 +85,15 @@ onBeforeUnmount(() => {
             {{ statusLabelMap[store.currentTask.status] }}
           </span>
           <span class="text-muted">进度 {{ store.currentTask.progressCount }} / {{ store.currentTask.count }}</span>
+          <button
+            v-if="canStopTask"
+            class="table-action-button table-action-stop"
+            type="button"
+            :disabled="store.loading"
+            @click="handleStopTask"
+          >
+            停止任务
+          </button>
         </div>
         <div class="text-muted">URL: {{ store.currentTask.url }}</div>
         <div class="text-muted">

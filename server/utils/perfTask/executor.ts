@@ -7,12 +7,29 @@ import {
   finalizePerfTask,
   getTaskMeta,
   listTaskRunsByTaskId,
+  markPerfTaskCancelled,
   markPerfTaskFailed,
   markPerfTaskRunning
 } from './repository'
 import { buildPerfTaskSummary } from './stats'
 
 const runningTaskIds = new Set<string>()
+const cancelRequestedTaskIds = new Set<string>()
+
+class TaskCancelledError extends Error {
+  constructor() {
+    super('任务已手动停止')
+    this.name = 'TaskCancelledError'
+  }
+}
+
+const isTaskCancelledError = (error: unknown) => error instanceof TaskCancelledError
+
+const throwIfTaskCancelled = (taskId: string) => {
+  if (cancelRequestedTaskIds.has(taskId)) {
+    throw new TaskCancelledError()
+  }
+}
 
 const runWithConcurrency = async (
   size: number,
@@ -59,6 +76,12 @@ const runSingleWithRetry = async (url: string, retryCount: number) => {
 }
 
 export const startPerfTaskExecution = (taskId: string) => {
+  if (cancelRequestedTaskIds.has(taskId)) {
+    perfTaskLog.warn('skip start: task cancelled before execution', { taskId })
+    cancelRequestedTaskIds.delete(taskId)
+    return
+  }
+
   if (runningTaskIds.has(taskId)) {
     perfTaskLog.warn('skip start: task already running', { taskId })
     return
@@ -68,8 +91,13 @@ export const startPerfTaskExecution = (taskId: string) => {
   perfTaskLog.info('task execution scheduled', { taskId })
   void executePerfTask(taskId).finally(() => {
     runningTaskIds.delete(taskId)
+    cancelRequestedTaskIds.delete(taskId)
     perfTaskLog.info('task execution released lock', { taskId })
   })
+}
+
+export const requestCancelPerfTaskExecution = (taskId: string) => {
+  cancelRequestedTaskIds.add(taskId)
 }
 
 const executePerfTask = async (taskId: string) => {
@@ -87,20 +115,28 @@ const executePerfTask = async (taskId: string) => {
     concurrency: config.concurrency,
     retryCount: config.retryCount
   })
-  markPerfTaskRunning(taskId)
+  const marked = markPerfTaskRunning(taskId)
+  if (!marked) {
+    perfTaskLog.warn('skip execution: task is not pending/running', { taskId })
+    return
+  }
 
   try {
     await runWithConcurrency(taskMeta.count, config.concurrency, async (index) => {
+      throwIfTaskCancelled(taskId)
       const createdAt = new Date().toISOString()
       try {
         const result = await runSingleWithRetry(taskMeta.url, config.retryCount)
+        throwIfTaskCancelled(taskId)
         const run: PerfTaskRunItem = {
           runIndex: index + 1,
           runId: result.runId,
           status: 'success',
           debugBearUrl: result.debugBearUrl,
           lcp: result.lcp,
+          fcp: result.fcp,
           inp: result.inp,
+          tbt: result.tbt,
           cls: result.cls,
           ttfb: result.ttfb,
           errorMessage: null,
@@ -114,13 +150,18 @@ const executePerfTask = async (taskId: string) => {
           debugBearUrl: run.debugBearUrl
         })
       } catch (error) {
+        if (isTaskCancelledError(error)) {
+          throw error
+        }
         const run: PerfTaskRunItem = {
           runIndex: index + 1,
           runId: null,
           status: 'failed',
           debugBearUrl: null,
           lcp: null,
+          fcp: null,
           inp: null,
+          tbt: null,
           cls: null,
           ttfb: null,
           errorMessage: error instanceof Error ? error.message : '调用 DebugBear 失败',
@@ -138,7 +179,9 @@ const executePerfTask = async (taskId: string) => {
     const summary = buildPerfTaskSummary(
       allRuns.map((run) => ({
         lcp: run.lcp,
+        fcp: run.fcp,
         inp: run.inp,
+        tbt: run.tbt,
         cls: run.cls,
         ttfb: run.ttfb,
         status: run.status
@@ -160,8 +203,16 @@ const executePerfTask = async (taskId: string) => {
       failCount: summary.failCount
     })
   } catch (error) {
-    const message = toTaskErrorMessage(error, '任务执行失败')
+    const message = isTaskCancelledError(error)
+      ? '任务已中止'
+      : toTaskErrorMessage(error, '任务执行失败')
+    if (isTaskCancelledError(error)) {
+      markPerfTaskCancelled(taskId, message)
+      perfTaskLog.warn('task execution cancelled', { taskId })
+      return
+    }
     markPerfTaskFailed(taskId, message)
     perfTaskLog.error('task execution aborted', error, { taskId })
   }
 }
+

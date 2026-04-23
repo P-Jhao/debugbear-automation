@@ -4,6 +4,15 @@ import { DatabaseSync } from 'node:sqlite'
 
 let dbInstance: DatabaseSync | null = null
 
+const ensureColumn = (db: DatabaseSync, table: string, column: string, definition: string) => {
+  const rows = db.prepare(`PRAGMA table_info(${table});`).all() as Array<{ name: string }>
+  const exists = rows.some((row) => row.name === column)
+  if (exists) {
+    return
+  }
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`)
+}
+
 const ensureSchema = (db: DatabaseSync) => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS perf_tasks (
@@ -52,6 +61,9 @@ const ensureSchema = (db: DatabaseSync) => {
     CREATE INDEX IF NOT EXISTS idx_perf_task_runs_task_id
     ON perf_task_runs(task_id, run_index);
   `)
+
+  ensureColumn(db, 'perf_task_runs', 'fcp', 'REAL')
+  ensureColumn(db, 'perf_task_runs', 'tbt', 'REAL')
 }
 
 export const getPerfTaskDb = () => {

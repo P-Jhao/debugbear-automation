@@ -18,6 +18,22 @@ const onVersionChange = async (version: string) => {
   await store.fetchGroups(version)
 }
 
+const onStopTask = async (taskId: string) => {
+  if (!window.confirm('确认停止这个任务吗？当前已提交的请求可能会在本轮结束后停止。')) {
+    return
+  }
+  await store.stopTask(taskId)
+  await store.fetchTasks(activeFilters.value)
+}
+
+const onDeleteTask = async (taskId: string) => {
+  if (!window.confirm('确认删除这个历史任务吗？删除后不可恢复。')) {
+    return
+  }
+  await store.deleteTask(taskId)
+  await store.fetchTasks(activeFilters.value)
+}
+
 await loadData()
 </script>
 
@@ -29,7 +45,7 @@ await loadData()
       @search="onSearch"
       @version-change="onVersionChange"
     />
-    <TaskListTable :items="store.tasks" />
+    <TaskListTable :items="store.tasks" @stop="onStopTask" @delete="onDeleteTask" />
     <p v-if="store.errorMessage" class="error-text">{{ store.errorMessage }}</p>
   </div>
 </template>

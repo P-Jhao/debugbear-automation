@@ -7,7 +7,7 @@ import type {
   PerfTaskStatus
 } from '~/shared/types/perfTask'
 
-const TERMINAL_STATUSES = new Set<PerfTaskStatus>(['completed', 'partial_failed', 'failed'])
+const TERMINAL_STATUSES = new Set<PerfTaskStatus>(['cancelled', 'completed', 'partial_failed', 'failed'])
 
 const getReadableError = (error: unknown, fallback: string) => {
   if (error && typeof error === 'object') {
@@ -45,7 +45,7 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
       tasks.value = data.items
       return data.items
     } catch (error) {
-      errorMessage.value = getReadableError(error, '加载任务列表失败')
+      errorMessage.value = getReadableError(error, '鍔犺浇浠诲姟鍒楄〃澶辫触')
       throw error
     } finally {
       loading.value = false
@@ -60,7 +60,7 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
       currentTask.value = data
       return data
     } catch (error) {
-      errorMessage.value = getReadableError(error, '加载任务详情失败')
+      errorMessage.value = getReadableError(error, '鍔犺浇浠诲姟璇︽儏澶辫触')
       throw error
     } finally {
       loading.value = false
@@ -74,7 +74,47 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
       const data = await api.createTask(payload)
       return data.taskId
     } catch (error) {
-      errorMessage.value = getReadableError(error, '创建任务失败')
+      errorMessage.value = getReadableError(error, '鍒涘缓浠诲姟澶辫触')
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const deleteTask = async (taskId: string) => {
+    loading.value = true
+    errorMessage.value = null
+    try {
+      await api.deleteTask(taskId)
+      tasks.value = tasks.value.filter((item) => item.taskId !== taskId)
+      if (currentTask.value?.taskId === taskId) {
+        currentTask.value = null
+      }
+    } catch (error) {
+      errorMessage.value = getReadableError(error, '鍒犻櫎浠诲姟澶辫触')
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const stopTask = async (taskId: string) => {
+    loading.value = true
+    errorMessage.value = null
+    try {
+      await api.stopTask(taskId)
+
+      if (currentTask.value?.taskId === taskId) {
+        currentTask.value = await api.getTaskDetail(taskId)
+      }
+
+      const listItem = tasks.value.find((item) => item.taskId === taskId)
+      if (listItem) {
+        listItem.status = 'cancelled'
+        listItem.errorMessage = '任务已中止'
+      }
+    } catch (error) {
+      errorMessage.value = getReadableError(error, '鍋滄浠诲姟澶辫触')
       throw error
     } finally {
       loading.value = false
@@ -113,7 +153,10 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
     fetchTasks,
     fetchTaskDetail,
     createTask,
+    deleteTask,
+    stopTask,
     fetchVersions,
     fetchGroups
   }
 })
+

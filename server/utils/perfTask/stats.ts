@@ -2,7 +2,9 @@ import type { MetricSummary, PerfTaskSummary } from '~/shared/types/perfTask'
 
 interface MetricRun {
   lcp: number | null
+  fcp: number | null
   inp: number | null
+  tbt: number | null
   cls: number | null
   ttfb: number | null
   status: 'success' | 'failed'
@@ -59,7 +61,9 @@ export const buildPerfTaskSummary = (runs: MetricRun[]): PerfTaskSummary => {
 
   return {
     lcp: computeMetricSummary(getValues('lcp')),
+    fcp: computeMetricSummary(getValues('fcp')),
     inp: computeMetricSummary(getValues('inp')),
+    tbt: computeMetricSummary(getValues('tbt')),
     cls: computeMetricSummary(getValues('cls')),
     ttfb: computeMetricSummary(getValues('ttfb')),
     successCount,

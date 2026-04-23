@@ -22,6 +22,7 @@ const statuses: Array<{ label: string; value: PerfTaskStatus | '' }> = [
   { label: '全部状态', value: '' },
   { label: '待执行', value: 'pending' },
   { label: '执行中', value: 'running' },
+  { label: '已中止', value: 'cancelled' },
   { label: '已完成', value: 'completed' },
   { label: '部分失败', value: 'partial_failed' },
   { label: '失败', value: 'failed' }

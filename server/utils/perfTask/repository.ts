@@ -33,12 +33,17 @@ interface PerfTaskRunRow {
   status: 'success' | 'failed'
   debugbear_url: string | null
   lcp: number | null
+  fcp: number | null
   inp: number | null
+  tbt: number | null
   cls: number | null
   ttfb: number | null
   error_message: string | null
   created_at: string
 }
+
+type DeletePerfTaskResult = 'deleted' | 'not_found' | 'running'
+type StopPerfTaskResult = 'stopped' | 'not_found' | 'not_stoppable'
 
 const toListItem = (row: PerfTaskRow): PerfTaskListItem => ({
   taskId: row.task_id,
@@ -61,12 +66,59 @@ const toRunItem = (row: PerfTaskRunRow): PerfTaskRunItem => ({
   status: row.status,
   debugBearUrl: row.debugbear_url,
   lcp: row.lcp,
+  fcp: row.fcp,
   inp: row.inp,
+  tbt: row.tbt,
   cls: row.cls,
   ttfb: row.ttfb,
   errorMessage: row.error_message,
   createdAt: row.created_at
 })
+
+const EMPTY_METRIC_SUMMARY = {
+  avg: null,
+  trimmedAvg: null,
+  max: null,
+  min: null
+} as const
+
+const normalizeMetricSummary = (metric: unknown) => {
+  if (!metric || typeof metric !== 'object') {
+    return { ...EMPTY_METRIC_SUMMARY }
+  }
+
+  const maybe = metric as {
+    avg?: number | null
+    trimmedAvg?: number | null
+    max?: number | null
+    min?: number | null
+  }
+
+  return {
+    avg: typeof maybe.avg === 'number' ? maybe.avg : null,
+    trimmedAvg: typeof maybe.trimmedAvg === 'number' ? maybe.trimmedAvg : null,
+    max: typeof maybe.max === 'number' ? maybe.max : null,
+    min: typeof maybe.min === 'number' ? maybe.min : null
+  }
+}
+
+const normalizeSummary = (summary: unknown): PerfTaskSummary | null => {
+  if (!summary || typeof summary !== 'object') {
+    return null
+  }
+
+  const maybe = summary as Partial<PerfTaskSummary>
+  return {
+    lcp: normalizeMetricSummary(maybe.lcp),
+    fcp: normalizeMetricSummary(maybe.fcp),
+    inp: normalizeMetricSummary(maybe.inp),
+    tbt: normalizeMetricSummary(maybe.tbt),
+    cls: normalizeMetricSummary(maybe.cls),
+    ttfb: normalizeMetricSummary(maybe.ttfb),
+    successCount: typeof maybe.successCount === 'number' ? maybe.successCount : 0,
+    failCount: typeof maybe.failCount === 'number' ? maybe.failCount : 0
+  }
+}
 
 export const createPerfTask = (payload: CreatePerfTaskRequest) => {
   const db = getPerfTaskDb()
@@ -220,7 +272,9 @@ export const getPerfTaskDetail = (taskId: string): PerfTaskDetailResponse | null
         status,
         debugbear_url,
         lcp,
+        fcp,
         inp,
+        tbt,
         cls,
         ttfb,
         error_message,
@@ -234,7 +288,7 @@ export const getPerfTaskDetail = (taskId: string): PerfTaskDetailResponse | null
 
   let summary: PerfTaskSummary | null = null
   if (row.summary_json) {
-    summary = JSON.parse(row.summary_json) as PerfTaskSummary
+    summary = normalizeSummary(JSON.parse(row.summary_json))
   }
 
   return {
@@ -245,18 +299,21 @@ export const getPerfTaskDetail = (taskId: string): PerfTaskDetailResponse | null
   }
 }
 
-export const markPerfTaskRunning = (taskId: string) => {
+export const markPerfTaskRunning = (taskId: string): boolean => {
   const db = getPerfTaskDb()
-  db.prepare(
+  const result = db
+    .prepare(
     `
       UPDATE perf_tasks
       SET status = 'running', updated_at = @updatedAt
-      WHERE task_id = @taskId;
+      WHERE task_id = @taskId
+        AND status IN ('pending', 'running');
     `
   ).run({
     taskId,
     updatedAt: new Date().toISOString()
   })
+  return result.changes > 0
 }
 
 export const markPerfTaskFailed = (taskId: string, message: string) => {
@@ -265,6 +322,21 @@ export const markPerfTaskFailed = (taskId: string, message: string) => {
     `
       UPDATE perf_tasks
       SET status = 'failed', error_message = @message, updated_at = @updatedAt
+      WHERE task_id = @taskId;
+    `
+  ).run({
+    taskId,
+    message,
+    updatedAt: new Date().toISOString()
+  })
+}
+
+export const markPerfTaskCancelled = (taskId: string, message: string) => {
+  const db = getPerfTaskDb()
+  db.prepare(
+    `
+      UPDATE perf_tasks
+      SET status = 'cancelled', error_message = @message, updated_at = @updatedAt
       WHERE task_id = @taskId;
     `
   ).run({
@@ -287,7 +359,9 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
         debugbear_url,
         status,
         lcp,
+        fcp,
         inp,
+        tbt,
         cls,
         ttfb,
         error_message,
@@ -300,7 +374,9 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
         @debugbearUrl,
         @status,
         @lcp,
+        @fcp,
         @inp,
+        @tbt,
         @cls,
         @ttfb,
         @errorMessage,
@@ -314,7 +390,9 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
       debugbearUrl: run.debugBearUrl,
       status: run.status,
       lcp: run.lcp,
+      fcp: run.fcp,
       inp: run.inp,
+      tbt: run.tbt,
       cls: run.cls,
       ttfb: run.ttfb,
       errorMessage: run.errorMessage,
@@ -391,7 +469,9 @@ export const listTaskRunsByTaskId = (taskId: string) => {
         status,
         debugbear_url,
         lcp,
+        fcp,
         inp,
+        tbt,
         cls,
         ttfb,
         error_message,
@@ -432,3 +512,108 @@ export const listDistinctGroupsByVersion = (version: string) => {
     .all(version) as Array<{ task_group: string }>
   return rows.map((row) => row.task_group)
 }
+
+export const deletePerfTask = (taskId: string): DeletePerfTaskResult => {
+  const db = getPerfTaskDb()
+
+  const task = db
+    .prepare(
+      `
+      SELECT status
+      FROM perf_tasks
+      WHERE task_id = ?;
+      `
+    )
+    .get(taskId) as { status: PerfTaskStatus } | undefined
+
+  if (!task) {
+    return 'not_found'
+  }
+
+  if (task.status === 'running') {
+    return 'running'
+  }
+
+  db.exec('BEGIN;')
+  try {
+    db.prepare(
+      `
+      DELETE FROM perf_task_runs
+      WHERE task_id = ?;
+      `
+    ).run(taskId)
+
+    db.prepare(
+      `
+      DELETE FROM perf_tasks
+      WHERE task_id = ?;
+      `
+    ).run(taskId)
+
+    db.exec('COMMIT;')
+    return 'deleted'
+  } catch (error) {
+    db.exec('ROLLBACK;')
+    throw error
+  }
+}
+
+export const stopPerfTask = (taskId: string, message = '任务已手动停止'): StopPerfTaskResult => {
+  const db = getPerfTaskDb()
+  const now = new Date().toISOString()
+
+  const result = db
+    .prepare(
+      `
+      UPDATE perf_tasks
+      SET status = 'cancelled', error_message = @message, updated_at = @updatedAt
+      WHERE task_id = @taskId
+        AND status IN ('pending', 'running');
+      `
+    )
+    .run({
+      taskId,
+      message,
+      updatedAt: now
+    })
+
+  if (result.changes > 0) {
+    return 'stopped'
+  }
+
+  const exists = db
+    .prepare(
+      `
+      SELECT 1
+      FROM perf_tasks
+      WHERE task_id = ?;
+      `
+    )
+    .get(taskId) as { 1: number } | undefined
+
+  if (!exists) {
+    return 'not_found'
+  }
+
+  return 'not_stoppable'
+}
+
+export const markStaleRunningTasksAsFailed = (message = '服务重启导致任务中断') => {
+  const db = getPerfTaskDb()
+  const result = db
+    .prepare(
+      `
+      UPDATE perf_tasks
+      SET status = 'failed', error_message = @message, updated_at = @updatedAt
+      WHERE status = 'running';
+      `
+    )
+    .run({
+      message,
+      updatedAt: new Date().toISOString()
+    })
+
+  return result.changes
+}
+
+

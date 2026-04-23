@@ -4,6 +4,7 @@ import { listPerfTasks } from '~~/server/utils/perfTask/repository'
 const statusSet = new Set<PerfTaskStatus>([
   'pending',
   'running',
+  'cancelled',
   'completed',
   'partial_failed',
   'failed'

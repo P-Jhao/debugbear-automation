@@ -20,7 +20,9 @@ defineProps<{
             <th>序号</th>
             <th>状态</th>
             <th>LCP</th>
+            <th>FCP</th>
             <th>INP</th>
+            <th>TBT</th>
             <th>CLS</th>
             <th>TTFB</th>
             <th>详情</th>
@@ -37,7 +39,9 @@ defineProps<{
               </span>
             </td>
             <td>{{ run.lcp ?? '-' }}</td>
+            <td>{{ run.fcp ?? '-' }}</td>
             <td>{{ run.inp ?? '-' }}</td>
+            <td>{{ run.tbt ?? '-' }}</td>
             <td>{{ run.cls ?? '-' }}</td>
             <td>{{ run.ttfb ?? '-' }}</td>
             <td>
@@ -50,7 +54,7 @@ defineProps<{
             <td>{{ new Date(run.createdAt).toLocaleString() }}</td>
           </tr>
           <tr v-if="runs.length === 0">
-            <td colspan="9" class="text-muted">暂无运行记录</td>
+            <td colspan="11" class="text-muted">暂无运行记录</td>
           </tr>
         </tbody>
       </table>

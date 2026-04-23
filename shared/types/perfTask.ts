@@ -1,6 +1,7 @@
 export type PerfTaskStatus =
   | 'pending'
   | 'running'
+  | 'cancelled'
   | 'completed'
   | 'partial_failed'
   | 'failed'
@@ -26,7 +27,9 @@ export interface PerfTaskRunItem {
   status: 'success' | 'failed'
   debugBearUrl: string | null
   lcp: number | null
+  fcp: number | null
   inp: number | null
+  tbt: number | null
   cls: number | null
   ttfb: number | null
   errorMessage: string | null
@@ -42,7 +45,9 @@ export interface MetricSummary {
 
 export interface PerfTaskSummary {
   lcp: MetricSummary
+  fcp: MetricSummary
   inp: MetricSummary
+  tbt: MetricSummary
   cls: MetricSummary
   ttfb: MetricSummary
   successCount: number

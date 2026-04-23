@@ -232,6 +232,11 @@ tbody tr:last-child td {
   color: var(--status-info-text);
 }
 
+.status-cancelled {
+  background: var(--status-warn-bg);
+  color: var(--status-warn-text);
+}
+
 .status-completed {
   background: var(--status-success-bg);
   color: var(--status-success-text);
@@ -278,6 +283,82 @@ tbody tr:last-child td {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.table-actions {
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.table-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 120ms ease;
+}
+
+.table-action-button:hover {
+  background: var(--bg-muted);
+  border-color: #dddddd;
+}
+
+.table-action-button:active {
+  transform: scale(0.98);
+}
+
+.table-action-button:focus-visible {
+  outline: 2px solid rgba(17, 17, 17, 0.18);
+  outline-offset: 1px;
+}
+
+.table-action-view {
+  background: #f9f9f8;
+}
+
+.table-action-delete {
+  background: #fdf6f6;
+  color: #8f3937;
+  border-color: #f3dedd;
+}
+
+.table-action-delete:hover {
+  background: #fdebec;
+  border-color: #ecc5c3;
+}
+
+.table-action-delete:focus-visible {
+  outline-color: rgba(159, 47, 45, 0.22);
+}
+
+.table-action-stop {
+  background: #fff7e8;
+  color: #8a5a00;
+  border-color: #f3dfb8;
+}
+
+.table-action-stop:hover {
+  background: #fdeecf;
+  border-color: #e8c982;
+}
+
+.table-action-stop:focus-visible {
+  outline-color: rgba(149, 100, 0, 0.25);
 }
 
 .text-muted {

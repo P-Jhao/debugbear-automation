@@ -6,7 +6,9 @@ interface DebugBearMetricResult {
   runId: string | null
   debugBearUrl: string | null
   lcp: number | null
+  fcp: number | null
   inp: number | null
+  tbt: number | null
   cls: number | null
   ttfb: number | null
 }
@@ -25,16 +27,62 @@ const getClient = () => {
   return debugBearClient
 }
 
-const pickNumber = (
-  metrics: Record<string, number | string | null | undefined>,
-  candidates: string[]
-) => {
-  for (const key of candidates) {
-    const value = metrics[key]
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return value
+const toFiniteNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
     }
   }
+  return null
+}
+
+const flattenObject = (value: unknown, prefix = '', out: Record<string, unknown> = {}) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return out
+  }
+
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    const next = prefix ? `${prefix}.${key}` : key
+    if (child && typeof child === 'object' && !Array.isArray(child)) {
+      flattenObject(child, next, out)
+    } else {
+      out[next] = child
+    }
+  }
+
+  return out
+}
+
+const normalizeMetricKey = (key: string) => key.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+const pickMetric = (metrics: Record<string, unknown>, aliases: string[]) => {
+  for (const key of aliases) {
+    const direct = toFiniteNumber(metrics[key])
+    if (direct !== null) {
+      return direct
+    }
+  }
+
+  const aliasesNormalized = aliases.map(normalizeMetricKey)
+  const entries = Object.entries(metrics)
+
+  for (const alias of aliasesNormalized) {
+    for (const [key, raw] of entries) {
+      const value = toFiniteNumber(raw)
+      if (value === null) {
+        continue
+      }
+      const normalizedKey = normalizeMetricKey(key)
+      if (normalizedKey === alias || normalizedKey.endsWith(alias)) {
+        return value
+      }
+    }
+  }
+
   return null
 }
 
@@ -54,19 +102,21 @@ export const runDebugBearAnalysis = async (url: string): Promise<DebugBearMetric
 
   const analysis = await client.pages.analyze(pageId, { url })
   const result = await analysis.waitForResult()
-  const metrics = (result?.build?.metrics ?? {}) as Record<
-    string,
-    number | string | null | undefined
-  >
+  const metrics = {
+    ...flattenObject(result?.build ?? {}),
+    ...flattenObject(result?.build?.metrics ?? {})
+  }
   const debugBearUrl = result?.url ?? null
 
   return {
     runId: parseRunIdFromUrl(debugBearUrl),
     debugBearUrl,
-    lcp: pickNumber(metrics, ['performance.largestContentfulPaint', 'crux.lcp.p75']),
-    inp: pickNumber(metrics, ['performance.interactionToNextPaint', 'crux.inp.p75']),
-    cls: pickNumber(metrics, ['performance.cumulativeLayoutShift', 'crux.cls.p75']),
-    ttfb: pickNumber(metrics, ['performance.serverResponseTime', 'performance.timeToFirstByte'])
+    lcp: pickMetric(metrics, ['performance.largestContentfulPaint', 'crux.lcp.p75', 'lcp']),
+    fcp: pickMetric(metrics, ['performance.firstContentfulPaint', 'crux.fcp.p75', 'fcp']),
+    inp: pickMetric(metrics, ['performance.interactionToNextPaint', 'crux.inp.p75', 'inp']),
+    tbt: pickMetric(metrics, ['performance.totalBlockingTime', 'crux.tbt.p75', 'tbt']),
+    cls: pickMetric(metrics, ['performance.cumulativeLayoutShift', 'crux.cls.p75', 'cls']),
+    ttfb: pickMetric(metrics, ['performance.serverResponseTime', 'performance.timeToFirstByte', 'ttfb'])
   }
 }
 

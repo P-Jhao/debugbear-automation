@@ -20,6 +20,16 @@ export const usePerfTasksApi = () => {
   const getTaskDetail = (taskId: string) =>
     $fetch<PerfTaskDetailResponse>(`/api/perf-tasks/${taskId}`)
 
+  const deleteTask = (taskId: string) =>
+    $fetch<{ success: true }>(`/api/perf-tasks/${taskId}`, {
+      method: 'DELETE'
+    })
+
+  const stopTask = (taskId: string) =>
+    $fetch<{ success: true }>(`/api/perf-tasks/${taskId}/cancel`, {
+      method: 'POST'
+    })
+
   const listVersions = () =>
     $fetch<{ items: string[] }>('/api/versions')
 
@@ -30,6 +40,8 @@ export const usePerfTasksApi = () => {
     createTask,
     listTasks,
     getTaskDetail,
+    deleteTask,
+    stopTask,
     listVersions,
     listGroups
   }
