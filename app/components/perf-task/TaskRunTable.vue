@@ -24,10 +24,11 @@ defineProps<{
             <th>TBT</th>
             <th>CLS</th>
             <th>TTFB</th>
+            <th>Lab Score</th>
             <th>Page Weight</th>
-            <th>详情</th>
-            <th>错误信息</th>
             <th>时间</th>
+            <th>错误信息</th>
+            <th>详情</th>
           </tr>
         </thead>
         <tbody>
@@ -43,18 +44,25 @@ defineProps<{
             <td>{{ run.tbt ?? '-' }}</td>
             <td>{{ run.cls ?? '-' }}</td>
             <td>{{ run.ttfb ?? '-' }}</td>
+            <td>{{ run.labScore ?? '-' }}</td>
             <td>{{ run.pageWeight ?? '-' }}</td>
+            <td>{{ new Date(run.createdAt).toLocaleString() }}</td>
+            <td>{{ run.errorMessage || '-' }}</td>
             <td>
-              <a v-if="run.debugBearUrl" :href="run.debugBearUrl" target="_blank" rel="noreferrer">
+              <a
+                v-if="run.debugBearUrl"
+                class="table-action-button table-action-view"
+                :href="run.debugBearUrl"
+                target="_blank"
+                rel="noreferrer"
+              >
                 查看
               </a>
               <span v-else>-</span>
             </td>
-            <td>{{ run.errorMessage || '-' }}</td>
-            <td>{{ new Date(run.createdAt).toLocaleString() }}</td>
           </tr>
           <tr v-if="runs.length === 0">
-            <td colspan="11" class="text-muted">暂无运行记录</td>
+            <td colspan="12" class="text-muted">暂无运行记录</td>
           </tr>
         </tbody>
       </table>

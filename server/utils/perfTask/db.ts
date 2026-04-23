@@ -46,6 +46,7 @@ const ensureSchema = (db: DatabaseSync) => {
       inp REAL,
       cls REAL,
       ttfb REAL,
+      lab_score REAL,
       page_weight REAL,
       error_message TEXT,
       created_at TEXT NOT NULL,
@@ -65,6 +66,7 @@ const ensureSchema = (db: DatabaseSync) => {
 
   ensureColumn(db, 'perf_task_runs', 'fcp', 'REAL')
   ensureColumn(db, 'perf_task_runs', 'tbt', 'REAL')
+  ensureColumn(db, 'perf_task_runs', 'lab_score', 'REAL')
   ensureColumn(db, 'perf_task_runs', 'page_weight', 'REAL')
 }
 

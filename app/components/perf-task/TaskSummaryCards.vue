@@ -97,6 +97,16 @@ const getMetric = (metric: MetricSummary | undefined): MetricSummary => {
       </div>
 
       <div>
+        <h3 class="section-subtitle">Lab Score</h3>
+        <div class="metric-grid">
+          <div v-for="item in items(getMetric(summary.labScore))" :key="`labScore-${item.label}`" class="metric-card">
+            <div class="metric-label">{{ item.label }}</div>
+            <div class="metric-value">{{ item.value }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
         <h3 class="section-subtitle">Page Weight</h3>
         <div class="metric-grid">
           <div
@@ -111,6 +121,6 @@ const getMetric = (metric: MetricSummary | undefined): MetricSummary => {
       </div>
     </div>
 
-    <p v-else class="text-muted">任务尚未完成，汇总结果会在执行结束后生成。</p>
+    <p v-else class="text-muted">暂无可汇总结果，首次执行返回后会自动计算。</p>
   </section>
 </template>

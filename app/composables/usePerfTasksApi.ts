@@ -33,8 +33,10 @@ export const usePerfTasksApi = () => {
   const listVersions = () =>
     $fetch<{ items: string[] }>('/api/versions')
 
-  const listGroups = (version: string) =>
-    $fetch<{ items: string[] }>(`/api/versions/${encodeURIComponent(version)}/groups`)
+  const listGroups = (version?: string) =>
+    version
+      ? $fetch<{ items: string[] }>(`/api/versions/${encodeURIComponent(version)}/groups`)
+      : $fetch<{ items: string[] }>('/api/versions/groups')
 
   return {
     createTask,

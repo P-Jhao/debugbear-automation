@@ -6,6 +6,7 @@ const activeFilters = ref<PerfTaskFilters>({})
 
 const loadData = async () => {
   await store.fetchVersions()
+  await store.fetchGroups()
   await store.fetchTasks(activeFilters.value)
 }
 

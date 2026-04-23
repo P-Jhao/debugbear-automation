@@ -9,6 +9,7 @@ import type {
   PerfTaskSummary
 } from '~/shared/types/perfTask'
 import { getPerfTaskDb } from './db'
+import { buildPerfTaskSummary } from './stats'
 
 interface PerfTaskRow {
   task_id: string
@@ -38,9 +39,22 @@ interface PerfTaskRunRow {
   tbt: number | null
   cls: number | null
   ttfb: number | null
+  lab_score: number | null
   page_weight: number | null
   error_message: string | null
   created_at: string
+}
+
+interface SummaryMetricRow {
+  status: 'success' | 'failed'
+  lcp: number | null
+  fcp: number | null
+  inp: number | null
+  tbt: number | null
+  cls: number | null
+  ttfb: number | null
+  lab_score: number | null
+  page_weight: number | null
 }
 
 type DeletePerfTaskResult = 'deleted' | 'not_found' | 'running'
@@ -72,6 +86,7 @@ const toRunItem = (row: PerfTaskRunRow): PerfTaskRunItem => ({
   tbt: row.tbt,
   cls: row.cls,
   ttfb: row.ttfb,
+  labScore: row.lab_score,
   pageWeight: row.page_weight,
   errorMessage: row.error_message,
   createdAt: row.created_at
@@ -117,6 +132,7 @@ const normalizeSummary = (summary: unknown): PerfTaskSummary | null => {
     tbt: normalizeMetricSummary(maybe.tbt),
     cls: normalizeMetricSummary(maybe.cls),
     ttfb: normalizeMetricSummary(maybe.ttfb),
+    labScore: normalizeMetricSummary(maybe.labScore),
     pageWeight: normalizeMetricSummary(maybe.pageWeight),
     successCount: typeof maybe.successCount === 'number' ? maybe.successCount : 0,
     failCount: typeof maybe.failCount === 'number' ? maybe.failCount : 0
@@ -280,6 +296,7 @@ export const getPerfTaskDetail = (taskId: string): PerfTaskDetailResponse | null
         tbt,
         cls,
         ttfb,
+        lab_score,
         page_weight,
         error_message,
         created_at
@@ -354,6 +371,7 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
   const db = getPerfTaskDb()
   db.exec('BEGIN;')
   try {
+    const updatedAt = new Date().toISOString()
     db.prepare(
       `
       INSERT INTO perf_task_runs (
@@ -368,6 +386,7 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
         tbt,
         cls,
         ttfb,
+        lab_score,
         page_weight,
         error_message,
         created_at
@@ -384,6 +403,7 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
         @tbt,
         @cls,
         @ttfb,
+        @labScore,
         @pageWeight,
         @errorMessage,
         @createdAt
@@ -401,6 +421,7 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
       tbt: run.tbt,
       cls: run.cls,
       ttfb: run.ttfb,
+      labScore: run.labScore,
       pageWeight: run.pageWeight,
       errorMessage: run.errorMessage,
       createdAt: run.createdAt
@@ -420,8 +441,54 @@ export const appendPerfTaskRun = (taskId: string, run: PerfTaskRunItem) => {
       taskId,
       successDelta: run.status === 'success' ? 1 : 0,
       failDelta: run.status === 'failed' ? 1 : 0,
-      updatedAt: new Date().toISOString()
+      updatedAt
     })
+
+    const metricRows = db
+      .prepare(
+        `
+        SELECT
+          status,
+          lcp,
+          fcp,
+          inp,
+          tbt,
+          cls,
+          ttfb,
+          lab_score,
+          page_weight
+        FROM perf_task_runs
+        WHERE task_id = ?;
+        `
+      )
+      .all(taskId) as SummaryMetricRow[]
+
+    const summary = buildPerfTaskSummary(
+      metricRows.map((row) => ({
+        status: row.status,
+        lcp: row.lcp,
+        fcp: row.fcp,
+        inp: row.inp,
+        tbt: row.tbt,
+        cls: row.cls,
+        ttfb: row.ttfb,
+        labScore: row.lab_score,
+        pageWeight: row.page_weight
+      }))
+    )
+
+    db.prepare(
+      `
+      UPDATE perf_tasks
+      SET summary_json = @summaryJson, updated_at = @updatedAt
+      WHERE task_id = @taskId;
+      `
+    ).run({
+      taskId,
+      summaryJson: JSON.stringify(summary),
+      updatedAt
+    })
+
     db.exec('COMMIT;')
   } catch (error) {
     db.exec('ROLLBACK;')
@@ -481,6 +548,7 @@ export const listTaskRunsByTaskId = (taskId: string) => {
         tbt,
         cls,
         ttfb,
+        lab_score,
         page_weight,
         error_message,
         created_at
@@ -518,6 +586,20 @@ export const listDistinctGroupsByVersion = (version: string) => {
       `
     )
     .all(version) as Array<{ task_group: string }>
+  return rows.map((row) => row.task_group)
+}
+
+export const listDistinctGroups = () => {
+  const db = getPerfTaskDb()
+  const rows = db
+    .prepare(
+      `
+      SELECT DISTINCT task_group
+      FROM perf_tasks
+      ORDER BY task_group ASC;
+      `
+    )
+    .all() as Array<{ task_group: string }>
   return rows.map((row) => row.task_group)
 }
 

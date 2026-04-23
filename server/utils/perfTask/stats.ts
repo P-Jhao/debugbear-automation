@@ -7,6 +7,7 @@ interface MetricRun {
   tbt: number | null
   cls: number | null
   ttfb: number | null
+  labScore: number | null
   pageWeight: number | null
   status: 'success' | 'failed'
 }
@@ -67,6 +68,7 @@ export const buildPerfTaskSummary = (runs: MetricRun[]): PerfTaskSummary => {
     tbt: computeMetricSummary(getValues('tbt')),
     cls: computeMetricSummary(getValues('cls')),
     ttfb: computeMetricSummary(getValues('ttfb')),
+    labScore: computeMetricSummary(getValues('labScore')),
     pageWeight: computeMetricSummary(getValues('pageWeight')),
     successCount,
     failCount

@@ -126,11 +126,7 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
     versions.value = data.items
   }
 
-  const fetchGroups = async (version: string) => {
-    if (!version) {
-      groups.value = []
-      return
-    }
+  const fetchGroups = async (version?: string) => {
     const data = await api.listGroups(version)
     groups.value = data.items
   }
