@@ -18,6 +18,16 @@ interface DebugBearMetricResult {
 let debugBearClient: DebugBear | null = null
 const pageIdCacheByUrl = new Map<string, number>()
 
+const toDebugBearDeviceName = (device?: 'mobile' | 'desktop') => {
+  if (device === 'mobile') {
+    return 'Mobile'
+  }
+  if (device === 'desktop') {
+    return 'Desktop'
+  }
+  return undefined
+}
+
 const getClient = () => {
   if (debugBearClient) {
     return debugBearClient
@@ -97,8 +107,11 @@ const parseRunIdFromUrl = (url: string | null): string | null => {
   return matched?.[1] ?? null
 }
 
-export const runDebugBearAnalysis = async (url: string): Promise<DebugBearMetricResult> => {
-  const pageId = await resolveDebugBearPageId(url)
+export const runDebugBearAnalysis = async (
+  url: string,
+  device?: 'mobile' | 'desktop'
+): Promise<DebugBearMetricResult> => {
+  const pageId = await resolveDebugBearPageId(url, device)
   const client = getClient()
   perfTaskLog.debug('start debugbear analyze', { url, pageId })
 
@@ -137,7 +150,15 @@ const createPageName = (url: string) => {
 }
 
 const loadProjectPages = async (projectId: number, apiKey: string, apiBaseUrl: string) => {
-  return await $fetch<{ pages?: Array<{ id: number | string; url?: string }> }>(
+  return await $fetch<{
+    pages?: Array<{
+      id: number | string
+      url?: string
+      device?: {
+        formFactor?: 'mobile' | 'desktop'
+      }
+    }>
+  }>(
     `${apiBaseUrl}/projects/${projectId}`,
     {
       headers: {
@@ -151,8 +172,10 @@ const createProjectPage = async (
   projectId: number,
   apiKey: string,
   apiBaseUrl: string,
-  url: string
+  url: string,
+  device?: 'mobile' | 'desktop'
 ) => {
+  const deviceName = toDebugBearDeviceName(device)
   return await $fetch<{ id: number | string }>(`${apiBaseUrl}/projects/${projectId}/pages`, {
     method: 'POST',
     headers: {
@@ -160,12 +183,16 @@ const createProjectPage = async (
     },
     body: {
       name: createPageName(url),
-      url
+      url,
+      ...(deviceName ? { deviceName } : {})
     }
   })
 }
 
-export const resolveDebugBearPageId = async (url: string): Promise<number> => {
+export const resolveDebugBearPageId = async (
+  url: string,
+  device?: 'mobile' | 'desktop'
+): Promise<number> => {
   const config = getPerfTaskConfig()
   if (config.debugBearPageId) {
     perfTaskLog.debug('use fixed page id from env', { pageId: config.debugBearPageId })
@@ -173,9 +200,10 @@ export const resolveDebugBearPageId = async (url: string): Promise<number> => {
   }
 
   const normalizedUrl = normalizeUrl(url)
-  const cached = pageIdCacheByUrl.get(normalizedUrl)
+  const pageCacheKey = `${normalizedUrl}::${device ?? 'all'}`
+  const cached = pageIdCacheByUrl.get(pageCacheKey)
   if (cached) {
-    perfTaskLog.debug('reuse cached page id', { normalizedUrl, pageId: cached })
+    perfTaskLog.debug('reuse cached page id', { normalizedUrl, device, pageId: cached })
     return cached
   }
 
@@ -198,6 +226,9 @@ export const resolveDebugBearPageId = async (url: string): Promise<number> => {
     if (!item.url) {
       return false
     }
+    if (device && item.device?.formFactor && item.device.formFactor !== device) {
+      return false
+    }
     try {
       return normalizeUrl(item.url) === normalizedUrl
     } catch {
@@ -208,9 +239,10 @@ export const resolveDebugBearPageId = async (url: string): Promise<number> => {
   if (existing) {
     const parsed = Number(existing.id)
     if (Number.isInteger(parsed) && parsed > 0) {
-      pageIdCacheByUrl.set(normalizedUrl, parsed)
+      pageIdCacheByUrl.set(pageCacheKey, parsed)
       perfTaskLog.info('found existing page for url', {
         normalizedUrl,
+        device,
         pageId: parsed
       })
       return parsed
@@ -221,7 +253,8 @@ export const resolveDebugBearPageId = async (url: string): Promise<number> => {
     config.debugBearProjectId,
     config.debugBearApiKey,
     config.debugBearApiBaseUrl,
-    url
+    url,
+    device
   )
 
   const pageId = Number(created.id)
@@ -229,9 +262,10 @@ export const resolveDebugBearPageId = async (url: string): Promise<number> => {
     throw new Error('自动创建 DebugBear 页面失败：返回的 page id 非法。')
   }
 
-  pageIdCacheByUrl.set(normalizedUrl, pageId)
+  pageIdCacheByUrl.set(pageCacheKey, pageId)
   perfTaskLog.info('created new debugbear page', {
     normalizedUrl,
+    device,
     pageId,
     projectId: config.debugBearProjectId
   })

@@ -11,17 +11,28 @@ const emit = defineEmits<{
   versionChange: [version: string]
 }>()
 
-const filters = reactive<PerfTaskFilters>({
+type TaskFiltersForm = {
+  url: string
+  status: PerfTaskStatus | ''
+  version: string
+  group: string
+  device: 'mobile' | 'desktop' | ''
+}
+
+const createDefaultFilters = (): TaskFiltersForm => ({
   url: '',
-  status: undefined,
+  status: '',
   version: '',
-  group: ''
+  group: '',
+  device: ''
 })
+
+const filters = reactive<TaskFiltersForm>(createDefaultFilters())
 
 const statuses: Array<{ label: string; value: PerfTaskStatus | '' }> = [
   { label: '全部状态', value: '' },
   { label: '待执行', value: 'pending' },
-  { label: '执行中', value: 'running' },
+  { label: '执行', value: 'running' },
   { label: '已中止', value: 'cancelled' },
   { label: '已完成', value: 'completed' },
   { label: '部分失败', value: 'partial_failed' },
@@ -38,8 +49,15 @@ const onSearch = () => {
     url: filters.url?.trim() || undefined,
     status: filters.status || undefined,
     version: filters.version?.trim() || undefined,
-    group: filters.group?.trim() || undefined
+    group: filters.group?.trim() || undefined,
+    device: filters.device || undefined
   })
+}
+
+const onReset = () => {
+  Object.assign(filters, createDefaultFilters())
+  emit('versionChange', '')
+  onSearch()
 }
 </script>
 
@@ -47,7 +65,10 @@ const onSearch = () => {
   <section class="surface-card surface-section">
     <div class="row-inline" style="justify-content: space-between">
       <h2 class="section-title">历史筛选</h2>
-      <button class="button-secondary" type="button" @click="onSearch">查询</button>
+      <div class="row-inline">
+        <button class="button-secondary" type="button" @click="onReset">重置</button>
+        <button class="button-secondary" type="button" @click="onSearch">查询</button>
+      </div>
     </div>
 
     <div class="form-grid">
@@ -76,6 +97,15 @@ const onSearch = () => {
         <select id="f-group" v-model="filters.group">
           <option value="">全部分组</option>
           <option v-for="item in props.groups" :key="item" :value="item">{{ item }}</option>
+        </select>
+      </div>
+
+      <div class="form-field">
+        <label for="f-device">设备</label>
+        <select id="f-device" v-model="filters.device">
+          <option value="">全部设备</option>
+          <option value="mobile">Mobile</option>
+          <option value="desktop">Desktop</option>
         </select>
       </div>
     </div>

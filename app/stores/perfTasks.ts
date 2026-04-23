@@ -45,7 +45,7 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
       tasks.value = data.items
       return data.items
     } catch (error) {
-      errorMessage.value = getReadableError(error, '鍔犺浇浠诲姟鍒楄〃澶辫触')
+      errorMessage.value = getReadableError(error, '加载任务列表失败')
       throw error
     } finally {
       loading.value = false
@@ -60,7 +60,7 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
       currentTask.value = data
       return data
     } catch (error) {
-      errorMessage.value = getReadableError(error, '鍔犺浇浠诲姟璇︽儏澶辫触')
+      errorMessage.value = getReadableError(error, '加载任务详情失败')
       throw error
     } finally {
       loading.value = false
@@ -72,9 +72,9 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
     errorMessage.value = null
     try {
       const data = await api.createTask(payload)
-      return data.taskId
+      return data
     } catch (error) {
-      errorMessage.value = getReadableError(error, '鍒涘缓浠诲姟澶辫触')
+      errorMessage.value = getReadableError(error, '创建任务失败')
       throw error
     } finally {
       loading.value = false
@@ -91,7 +91,7 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
         currentTask.value = null
       }
     } catch (error) {
-      errorMessage.value = getReadableError(error, '鍒犻櫎浠诲姟澶辫触')
+      errorMessage.value = getReadableError(error, '删除任务失败')
       throw error
     } finally {
       loading.value = false
@@ -114,7 +114,7 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
         listItem.errorMessage = '任务已中止'
       }
     } catch (error) {
-      errorMessage.value = getReadableError(error, '鍋滄浠诲姟澶辫触')
+      errorMessage.value = getReadableError(error, '停止任务失败')
       throw error
     } finally {
       loading.value = false

@@ -16,6 +16,17 @@ const form = reactive<CreatePerfTaskRequest>({
   group: ''
 })
 
+const deviceSelection = reactive<Record<'mobile' | 'desktop', boolean>>({
+  mobile: true,
+  desktop: true
+})
+
+const selectedDevices = computed<Array<'mobile' | 'desktop'>>(() =>
+  (Object.entries(deviceSelection) as Array<['mobile' | 'desktop', boolean]>)
+    .filter(([, checked]) => checked)
+    .map(([device]) => device)
+)
+
 const validationError = ref<string | null>(null)
 
 const submitForm = () => {
@@ -33,12 +44,22 @@ const submitForm = () => {
     validationError.value = '版本和分组不能为空'
     return
   }
+  if (selectedDevices.value.length === 0) {
+    validationError.value = '请至少选择一个测试设备'
+    return
+  }
+
+  const devices = selectedDevices.value
 
   emit('submit', {
     url: form.url.trim(),
     count: form.count,
     version: form.version.trim(),
-    group: form.group.trim()
+    group: form.group.trim(),
+    config: {
+      devices,
+      ...(devices.length === 1 ? { device: devices[0] } : {})
+    }
   })
 }
 </script>
@@ -63,12 +84,26 @@ const submitForm = () => {
 
       <div class="form-field">
         <label for="task-version">版本</label>
-        <input id="task-version" v-model="form.version" type="text" placeholder="2026.04.22" required />
+        <input id="task-version" v-model="form.version" type="text" placeholder="v1.0.0" required />
       </div>
 
       <div class="form-field">
         <label for="task-group">分组</label>
         <input id="task-group" v-model="form.group" type="text" placeholder="homepage" required />
+      </div>
+
+      <div class="form-field" style="grid-column: 1 / -1">
+        <label>测试设备</label>
+        <div class="device-options">
+          <label class="device-option">
+            <input v-model="deviceSelection.mobile" type="checkbox" />
+            <span>Mobile</span>
+          </label>
+          <label class="device-option">
+            <input v-model="deviceSelection.desktop" type="checkbox" />
+            <span>Desktop</span>
+          </label>
+        </div>
       </div>
 
       <div class="row-inline" style="grid-column: 1 / -1; justify-content: space-between">

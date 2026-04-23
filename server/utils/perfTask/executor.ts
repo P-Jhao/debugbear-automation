@@ -49,14 +49,18 @@ const runWithConcurrency = async (
   await Promise.all(workers)
 }
 
-const runSingleWithRetry = async (url: string, retryCount: number) => {
+const runSingleWithRetry = async (
+  url: string,
+  retryCount: number,
+  device?: 'mobile' | 'desktop'
+) => {
   let attempt = 0
   let lastError: unknown
 
   while (attempt <= retryCount) {
     try {
       perfTaskLog.debug('run attempt start', { attempt: attempt + 1, url })
-      return await runDebugBearAnalysis(url)
+      return await runDebugBearAnalysis(url, device)
     } catch (error) {
       lastError = error
       attempt += 1
@@ -73,6 +77,31 @@ const runSingleWithRetry = async (url: string, retryCount: number) => {
   }
 
   throw lastError
+}
+
+const pickTaskDevice = (taskDeviceConfig: unknown): 'mobile' | 'desktop' | undefined => {
+  if (!taskDeviceConfig || typeof taskDeviceConfig !== 'object') {
+    return undefined
+  }
+
+  const { device, devices } = taskDeviceConfig as {
+    device?: unknown
+    devices?: unknown
+  }
+
+  if (Array.isArray(devices)) {
+    const normalized = devices.filter((item): item is 'mobile' | 'desktop' => item === 'mobile' || item === 'desktop')
+    if (normalized.length === 1) {
+      return normalized[0]
+    }
+    return undefined
+  }
+
+  if (device === 'mobile' || device === 'desktop') {
+    return device
+  }
+
+  return undefined
 }
 
 export const startPerfTaskExecution = (taskId: string) => {
@@ -121,12 +150,14 @@ const executePerfTask = async (taskId: string) => {
     return
   }
 
+  const taskDevice = pickTaskDevice(taskMeta.config)
+
   try {
     await runWithConcurrency(taskMeta.count, config.concurrency, async (index) => {
       throwIfTaskCancelled(taskId)
       const createdAt = new Date().toISOString()
       try {
-        const result = await runSingleWithRetry(taskMeta.url, config.retryCount)
+        const result = await runSingleWithRetry(taskMeta.url, config.retryCount, taskDevice)
         throwIfTaskCancelled(taskId)
         const run: PerfTaskRunItem = {
           runIndex: index + 1,

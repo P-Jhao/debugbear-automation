@@ -6,8 +6,11 @@ export type PerfTaskStatus =
   | 'partial_failed'
   | 'failed'
 
+export type PerfTaskDevice = 'mobile' | 'desktop' | 'unknown'
+
 export interface PerfTaskConfig {
   device?: string
+  devices?: Array<'mobile' | 'desktop'>
   region?: string
   network?: string
 }
@@ -64,6 +67,7 @@ export interface PerfTaskListItem {
   count: number
   version: string
   group: string
+  device: PerfTaskDevice
   status: PerfTaskStatus
   progressCount: number
   successCount: number
@@ -88,6 +92,7 @@ export interface PerfTaskFilters {
   status?: PerfTaskStatus
   version?: string
   group?: string
+  device?: Extract<PerfTaskDevice, 'mobile' | 'desktop'>
   dateFrom?: string
   dateTo?: string
 }

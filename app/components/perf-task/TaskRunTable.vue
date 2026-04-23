@@ -27,7 +27,7 @@ defineProps<{
             <th>Lab Score</th>
             <th>Page Weight</th>
             <th>时间</th>
-            <th>错误信息</th>
+            <th class="error-column-header">错误信息</th>
             <th>详情</th>
           </tr>
         </thead>
@@ -47,7 +47,12 @@ defineProps<{
             <td>{{ run.labScore ?? '-' }}</td>
             <td>{{ run.pageWeight ?? '-' }}</td>
             <td>{{ new Date(run.createdAt).toLocaleString() }}</td>
-            <td>{{ run.errorMessage || '-' }}</td>
+            <td class="error-column-cell">
+              <AppTip v-if="run.errorMessage" :content="run.errorMessage">
+                <span class="error-message-text">{{ run.errorMessage }}</span>
+              </AppTip>
+              <span v-else>-</span>
+            </td>
             <td>
               <a
                 v-if="run.debugBearUrl"
@@ -69,3 +74,22 @@ defineProps<{
     </div>
   </section>
 </template>
+
+<style scoped>
+.error-column-header,
+.error-column-cell {
+  width: 240px;
+  max-width: 240px;
+}
+
+.error-message-text {
+  width: 100%;
+  display: -webkit-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+</style>
+

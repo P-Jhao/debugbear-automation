@@ -4,6 +4,7 @@ import type { PerfTaskListItem } from '~/shared/types/perfTask'
 defineProps<{
   items: PerfTaskListItem[]
 }>()
+
 const emit = defineEmits<{
   delete: [taskId: string]
   stop: [taskId: string]
@@ -17,13 +18,19 @@ const statusLabelMap: Record<string, string> = {
   partial_failed: '部分失败',
   failed: '失败'
 }
+
+const deviceLabelMap: Record<PerfTaskListItem['device'], string> = {
+  mobile: 'Mobile',
+  desktop: 'Desktop',
+  unknown: '-'
+}
 </script>
 
 <template>
   <section class="surface-card surface-section">
     <div>
       <h2 class="section-title">历史任务</h2>
-      <p class="section-subtitle">按版本和分组回看执行记录。</p>
+      <p class="section-subtitle">按版本、分组和设备回看执行记录。</p>
     </div>
 
     <div class="table-wrap">
@@ -33,6 +40,7 @@ const statusLabelMap: Record<string, string> = {
             <th>URL</th>
             <th>版本</th>
             <th>分组</th>
+            <th>设备</th>
             <th>状态</th>
             <th>进度</th>
             <th>成功/失败</th>
@@ -45,6 +53,7 @@ const statusLabelMap: Record<string, string> = {
             <td>{{ item.url }}</td>
             <td>{{ item.version }}</td>
             <td>{{ item.group }}</td>
+            <td>{{ deviceLabelMap[item.device] }}</td>
             <td>
               <span class="status-badge" :class="`status-${item.status}`">
                 {{ statusLabelMap[item.status] || item.status }}
@@ -77,7 +86,7 @@ const statusLabelMap: Record<string, string> = {
             </td>
           </tr>
           <tr v-if="items.length === 0">
-            <td colspan="8" class="text-muted">暂无任务</td>
+            <td colspan="9" class="text-muted">暂无任务</td>
           </tr>
         </tbody>
       </table>

@@ -9,6 +9,7 @@ const statusSet = new Set<PerfTaskStatus>([
   'partial_failed',
   'failed'
 ])
+const deviceSet = new Set(['mobile', 'desktop'])
 
 export default defineEventHandler((event) => {
   const query = getQuery(event)
@@ -25,6 +26,9 @@ export default defineEventHandler((event) => {
   }
   if (typeof query.group === 'string' && query.group.trim()) {
     filters.group = query.group.trim()
+  }
+  if (typeof query.device === 'string' && deviceSet.has(query.device)) {
+    filters.device = query.device as 'mobile' | 'desktop'
   }
   if (typeof query.dateFrom === 'string' && query.dateFrom.trim()) {
     filters.dateFrom = query.dateFrom.trim()

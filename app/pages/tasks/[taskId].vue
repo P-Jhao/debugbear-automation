@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PerfTaskStatus } from '~/shared/types/perfTask'
+import type { PerfTaskDevice, PerfTaskStatus } from '~/shared/types/perfTask'
 
 const route = useRoute()
 const store = usePerfTasksStore()
@@ -23,6 +23,12 @@ const statusLabelMap: Record<PerfTaskStatus, string> = {
   completed: '已完成',
   partial_failed: '部分失败',
   failed: '失败'
+}
+
+const deviceLabelMap: Record<PerfTaskDevice, string> = {
+  mobile: 'Mobile',
+  desktop: 'Desktop',
+  unknown: '-'
 }
 
 const canStopTask = computed(() => {
@@ -97,7 +103,8 @@ onBeforeUnmount(() => {
         </div>
         <div class="text-muted">URL: {{ store.currentTask.url }}</div>
         <div class="text-muted">
-          版本: {{ store.currentTask.version }} | 分组: {{ store.currentTask.group }}
+          版本: {{ store.currentTask.version }} | 分组: {{ store.currentTask.group }} | 设备:
+          {{ deviceLabelMap[store.currentTask.device] }}
         </div>
         <p v-if="store.currentTask.errorMessage" class="error-text">
           失败原因：{{ store.currentTask.errorMessage }}

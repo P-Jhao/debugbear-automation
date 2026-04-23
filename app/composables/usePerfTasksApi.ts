@@ -7,7 +7,7 @@ import type {
 
 export const usePerfTasksApi = () => {
   const createTask = (payload: CreatePerfTaskRequest) =>
-    $fetch<{ taskId: string }>('/api/perf-tasks', {
+    $fetch<{ taskId: string; taskIds: string[] }>('/api/perf-tasks', {
       method: 'POST',
       body: payload
     })

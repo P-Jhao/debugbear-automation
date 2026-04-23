@@ -8,8 +8,12 @@ const errorText = ref<string | null>(null)
 const handleCreateTask = async (payload: CreatePerfTaskRequest) => {
   errorText.value = null
   try {
-    const taskId = await store.createTask(payload)
-    await router.push(`/tasks/${taskId}`)
+    const result = await store.createTask(payload)
+    if (result.taskIds.length > 1) {
+      await router.push('/tasks')
+      return
+    }
+    await router.push(`/tasks/${result.taskId}`)
   } catch (error) {
     errorText.value = error instanceof Error ? error.message : '创建任务失败'
   }

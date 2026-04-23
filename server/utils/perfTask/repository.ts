@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type {
   CreatePerfTaskRequest,
+  PerfTaskDevice,
   PerfTaskDetailResponse,
   PerfTaskFilters,
   PerfTaskListItem,
@@ -21,6 +22,7 @@ interface PerfTaskRow {
   progress_count: number
   success_count: number
   fail_count: number
+  config_json: string | null
   error_message: string | null
   summary_json: string | null
   remark: string | null
@@ -66,6 +68,7 @@ const toListItem = (row: PerfTaskRow): PerfTaskListItem => ({
   count: row.count,
   version: row.version,
   group: row.task_group,
+  device: pickListDevice(row.config_json),
   status: row.status,
   progressCount: row.progress_count,
   successCount: row.success_count,
@@ -74,6 +77,40 @@ const toListItem = (row: PerfTaskRow): PerfTaskListItem => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at
 })
+
+const pickListDevice = (configJson: string | null): PerfTaskDevice => {
+  if (!configJson) {
+    return 'unknown'
+  }
+
+  try {
+    const parsed = JSON.parse(configJson) as {
+      device?: unknown
+      devices?: unknown
+    }
+
+    if (Array.isArray(parsed.devices)) {
+      const normalized = parsed.devices.filter(
+        (item): item is 'mobile' | 'desktop' => item === 'mobile' || item === 'desktop'
+      )
+
+      if (normalized.length === 1) {
+        return normalized[0]
+      }
+      if (normalized.length >= 2) {
+        return 'unknown'
+      }
+    }
+
+    if (parsed.device === 'mobile' || parsed.device === 'desktop') {
+      return parsed.device
+    }
+  } catch {
+    return 'unknown'
+  }
+
+  return 'unknown'
+}
 
 const toRunItem = (row: PerfTaskRunRow): PerfTaskRunItem => ({
   runIndex: row.run_index,
@@ -244,12 +281,13 @@ export const listPerfTasks = (filters: PerfTaskFilters): PerfTaskListItem[] => {
       FROM perf_tasks
       ${whereClause}
       ORDER BY created_at DESC
-      LIMIT 200;
+      ;
     `
     )
     .all(params) as PerfTaskRow[]
-
-  return rows.map(toListItem)
+  const items = rows.map(toListItem)
+  const filtered = filters.device ? items.filter((item) => item.device === filters.device) : items
+  return filtered.slice(0, 200)
 }
 
 export const getPerfTaskDetail = (taskId: string): PerfTaskDetailResponse | null => {
@@ -267,6 +305,7 @@ export const getPerfTaskDetail = (taskId: string): PerfTaskDetailResponse | null
         progress_count,
         success_count,
         fail_count,
+        config_json,
         error_message,
         summary_json,
         remark,
@@ -521,15 +560,37 @@ export const finalizePerfTask = (
 
 export const getTaskMeta = (taskId: string) => {
   const db = getPerfTaskDb()
-  return db
+  const row = db
     .prepare(
       `
-      SELECT task_id, url, count
+      SELECT task_id, url, count, config_json
       FROM perf_tasks
       WHERE task_id = ?;
       `
     )
-    .get(taskId) as { task_id: string; url: string; count: number } | undefined
+    .get(taskId) as
+    | { task_id: string; url: string; count: number; config_json: string | null }
+    | undefined
+
+  if (!row) {
+    return undefined
+  }
+
+  let config: CreatePerfTaskRequest['config'] | undefined
+  if (row.config_json) {
+    try {
+      config = JSON.parse(row.config_json) as CreatePerfTaskRequest['config']
+    } catch {
+      config = undefined
+    }
+  }
+
+  return {
+    task_id: row.task_id,
+    url: row.url,
+    count: row.count,
+    config
+  }
 }
 
 export const listTaskRunsByTaskId = (taskId: string) => {

@@ -13,12 +13,50 @@ const requestSchema = z.object({
   config: z
     .object({
       device: z.string().trim().min(1).optional(),
+      devices: z.array(z.enum(['mobile', 'desktop'])).min(1).optional(),
       region: z.string().trim().min(1).optional(),
       network: z.string().trim().min(1).optional()
     })
     .optional(),
   remark: z.string().trim().max(500).optional()
 })
+
+const normalizeDevices = (payload: CreatePerfTaskRequest): Array<'mobile' | 'desktop'> => {
+  const values = new Set<'mobile' | 'desktop'>()
+  const config = payload.config
+
+  if (!config) {
+    return []
+  }
+
+  if (Array.isArray(config.devices)) {
+    for (const item of config.devices) {
+      if (item === 'mobile' || item === 'desktop') {
+        values.add(item)
+      }
+    }
+  }
+
+  if (config.device === 'mobile' || config.device === 'desktop') {
+    values.add(config.device)
+  }
+
+  return Array.from(values)
+}
+
+const createAndStart = (payload: CreatePerfTaskRequest) => {
+  const taskId = createPerfTask(payload)
+  perfTaskLog.info('task created', {
+    taskId,
+    url: payload.url,
+    count: payload.count,
+    version: payload.version,
+    group: payload.group,
+    device: payload.config?.device
+  })
+  startPerfTaskExecution(taskId)
+  return taskId
+}
 
 export default defineEventHandler(async (event) => {
   let config: ReturnType<typeof getPerfTaskConfig>
@@ -30,6 +68,7 @@ export default defineEventHandler(async (event) => {
       statusMessage: error instanceof Error ? error.message : '服务端配置错误'
     })
   }
+
   const body = await readBody(event)
   const parsed = requestSchema.safeParse(body)
 
@@ -51,17 +90,39 @@ export default defineEventHandler(async (event) => {
     ...parsed.data
   }
 
-  const taskId = createPerfTask(payload)
-  perfTaskLog.info('task created', {
-    taskId,
-    url: payload.url,
-    count: payload.count,
-    version: payload.version,
-    group: payload.group
-  })
-  startPerfTaskExecution(taskId)
+  const devices = normalizeDevices(payload)
+  const taskIds: string[] = []
+
+  if (devices.length > 1) {
+    for (const device of devices) {
+      const splitPayload: CreatePerfTaskRequest = {
+        ...payload,
+        config: {
+          ...(payload.config ?? {}),
+          device,
+          devices: [device]
+        }
+      }
+      taskIds.push(createAndStart(splitPayload))
+    }
+  } else {
+    const singleDevice = devices[0]
+    const normalizedPayload =
+      singleDevice && payload.config
+        ? {
+            ...payload,
+            config: {
+              ...payload.config,
+              device: singleDevice,
+              devices: [singleDevice]
+            }
+          }
+        : payload
+    taskIds.push(createAndStart(normalizedPayload))
+  }
 
   return {
-    taskId
+    taskId: taskIds[0],
+    taskIds
   }
 })
