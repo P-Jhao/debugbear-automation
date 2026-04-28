@@ -31,12 +31,10 @@ const deviceLabelMap: Record<PerfTaskListItem['device'], string> = {
   unknown: '-'
 }
 
-const onPageSizeSelect = (event: Event) => {
-  const target = event.target as HTMLSelectElement | null
-  if (!target) {
-    return
-  }
-  emit('pageSizeChange', Number(target.value))
+const pageSizeOptions = [5, 10, 20] as const
+
+const onPageSizeSelect = (nextPageSize: number) => {
+  emit('pageSizeChange', nextPageSize)
 }
 </script>
 
@@ -121,17 +119,21 @@ const onPageSizeSelect = (event: Event) => {
     <div class="pager-row">
       <span class="text-muted pager-summary">共 {{ total }} 条，第 {{ page }} / {{ totalPages }} 页，每页 {{ pageSize }} 条</span>
       <div class="row-inline pager-actions">
-        <label class="pager-size-label" for="page-size-select">每页</label>
-        <select
-          id="page-size-select"
-          class="pager-size-select"
-          :value="pageSize"
-          @change="onPageSizeSelect"
-        >
-          <option :value="5">5</option>
-          <option :value="10">10</option>
-          <option :value="20">20</option>
-        </select>
+        <span class="pager-size-label">每页</span>
+        <div class="pager-size-group" role="radiogroup" aria-label="每页条数">
+          <button
+            v-for="size in pageSizeOptions"
+            :key="size"
+            type="button"
+            class="pager-size-chip"
+            :class="{ 'is-active': pageSize === size }"
+            :aria-checked="pageSize === size"
+            role="radio"
+            @click="onPageSizeSelect(size)"
+          >
+            {{ size }}
+          </button>
+        </div>
         <button class="button-secondary pager-button" type="button" :disabled="page <= 1" @click="emit('pageChange', page - 1)">
           上一页
         </button>
@@ -195,6 +197,7 @@ const onPageSizeSelect = (event: Event) => {
 
 .pager-actions {
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .pager-size-label {
@@ -202,12 +205,42 @@ const onPageSizeSelect = (event: Event) => {
   font-size: 0.88rem;
 }
 
-.pager-size-select {
-  height: 32px;
+.pager-size-group {
+  display: inline-flex;
+  align-items: center;
   border: 1px solid var(--border-soft);
-  border-radius: 6px;
+  border-radius: 8px;
+  padding: 2px;
   background: var(--bg-surface);
-  padding: 0 8px;
+}
+
+.pager-size-chip {
+  min-width: 38px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
   font-size: 0.88rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.pager-size-chip:hover {
+  background: var(--bg-muted);
+  color: var(--text-primary);
+}
+
+.pager-size-chip.is-active {
+  background: var(--accent-ink);
+  color: #fff;
+}
+
+.pager-size-chip:focus-visible {
+  outline: 2px solid rgba(17, 17, 17, 0.18);
+  outline-offset: 1px;
 }
 </style>
