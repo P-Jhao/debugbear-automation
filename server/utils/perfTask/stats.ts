@@ -12,12 +12,12 @@ interface MetricRun {
   status: 'success' | 'failed'
 }
 
-const roundValue = (value: number | null): number | null => {
+const normalizeValue = (value: number | null): number | null => {
   if (value === null || Number.isNaN(value)) {
     return null
   }
 
-  return Number(value.toFixed(2))
+  return value
 }
 
 const computeMetricSummary = (values: number[]): MetricSummary => {
@@ -44,10 +44,10 @@ const computeMetricSummary = (values: number[]): MetricSummary => {
   }
 
   return {
-    avg: roundValue(avg),
-    trimmedAvg: roundValue(trimmedAvg),
-    max: roundValue(max),
-    min: roundValue(min)
+    avg: normalizeValue(avg),
+    trimmedAvg: normalizeValue(trimmedAvg),
+    max: normalizeValue(max),
+    min: normalizeValue(min)
   }
 }
 

@@ -2,7 +2,13 @@
 import type { PerfTaskFilters } from '~/shared/types/perfTask'
 
 const store = usePerfTasksStore()
-const activeFilters = ref<PerfTaskFilters>({})
+const DEFAULT_PAGE_SIZE = 10
+const PAGE_SIZE_STORAGE_KEY = 'perf_tasks_page_size'
+const allowedPageSizes = new Set([5, 10, 20])
+const activeFilters = ref<PerfTaskFilters>({
+  page: 1,
+  pageSize: DEFAULT_PAGE_SIZE
+})
 
 const loadData = async () => {
   await store.fetchVersions()
@@ -11,8 +17,12 @@ const loadData = async () => {
 }
 
 const onSearch = async (filters: PerfTaskFilters) => {
-  activeFilters.value = filters
-  await store.fetchTasks(filters)
+  activeFilters.value = {
+    ...filters,
+    page: 1,
+    pageSize: activeFilters.value.pageSize ?? DEFAULT_PAGE_SIZE
+  }
+  await store.fetchTasks(activeFilters.value)
 }
 
 const onVersionChange = async (version: string) => {
@@ -35,6 +45,45 @@ const onDeleteTask = async (taskId: string) => {
   await store.fetchTasks(activeFilters.value)
 }
 
+const onPageChange = async (nextPage: number) => {
+  activeFilters.value = {
+    ...activeFilters.value,
+    page: nextPage,
+    pageSize: activeFilters.value.pageSize ?? DEFAULT_PAGE_SIZE
+  }
+  await store.fetchTasks(activeFilters.value)
+}
+
+const onPageSizeChange = async (nextPageSize: number) => {
+  if (!allowedPageSizes.has(nextPageSize)) {
+    return
+  }
+  activeFilters.value = {
+    ...activeFilters.value,
+    page: 1,
+    pageSize: nextPageSize
+  }
+  localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(nextPageSize))
+  await store.fetchTasks(activeFilters.value)
+}
+
+onMounted(async () => {
+  const raw = localStorage.getItem(PAGE_SIZE_STORAGE_KEY)
+  if (!raw) {
+    return
+  }
+  const parsed = Number.parseInt(raw, 10)
+  if (!allowedPageSizes.has(parsed) || parsed === activeFilters.value.pageSize) {
+    return
+  }
+  activeFilters.value = {
+    ...activeFilters.value,
+    page: 1,
+    pageSize: parsed
+  }
+  await store.fetchTasks(activeFilters.value)
+})
+
 await loadData()
 </script>
 
@@ -46,7 +95,17 @@ await loadData()
       @search="onSearch"
       @version-change="onVersionChange"
     />
-    <TaskListTable :items="store.tasks" @stop="onStopTask" @delete="onDeleteTask" />
+    <TaskListTable
+      :items="store.tasks"
+      :page="store.page"
+      :page-size="store.pageSize"
+      :total="store.total"
+      :total-pages="store.totalPages"
+      @stop="onStopTask"
+      @delete="onDeleteTask"
+      @page-change="onPageChange"
+      @page-size-change="onPageSizeChange"
+    />
     <p v-if="store.errorMessage" class="error-text">{{ store.errorMessage }}</p>
   </div>
 </template>

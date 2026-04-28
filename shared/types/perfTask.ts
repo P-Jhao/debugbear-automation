@@ -79,11 +79,16 @@ export interface PerfTaskListItem {
 
 export interface PerfTaskListResponse {
   items: PerfTaskListItem[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
 }
 
 export interface PerfTaskDetailResponse extends PerfTaskListItem {
   summary: PerfTaskSummary | null
   runs: PerfTaskRunItem[]
+  debugBearOverviewUrl: string | null
   remark: string | null
 }
 
@@ -95,4 +100,6 @@ export interface PerfTaskFilters {
   device?: Extract<PerfTaskDevice, 'mobile' | 'desktop'>
   dateFrom?: string
   dateTo?: string
+  page?: number
+  pageSize?: number
 }

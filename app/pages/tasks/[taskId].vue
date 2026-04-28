@@ -36,6 +36,31 @@ const canStopTask = computed(() => {
   return status === 'pending' || status === 'running'
 })
 
+const stripUrlQuery = (url: string | null | undefined) => {
+  if (!url) {
+    return null
+  }
+
+  try {
+    const parsed = new URL(url)
+    parsed.search = ''
+    parsed.hash = ''
+    return parsed.toString()
+  } catch {
+    return null
+  }
+}
+
+const taskOverviewUrl = computed(() => {
+  const normalizedOverview = stripUrlQuery(store.currentTask?.debugBearOverviewUrl)
+  if (normalizedOverview) {
+    return normalizedOverview
+  }
+
+  const firstRunUrl = store.currentTask?.runs.find((run) => Boolean(run.debugBearUrl))?.debugBearUrl
+  return stripUrlQuery(firstRunUrl)
+})
+
 const stopPolling = () => {
   if (timer) {
     clearInterval(timer)
@@ -84,7 +109,18 @@ onBeforeUnmount(() => {
 <template>
   <div class="page-stack">
     <section class="surface-card surface-section">
-      <h1 class="section-title">任务详情</h1>
+                  <div class="task-detail-header">
+        <h1 class="section-title">任务详情</h1>
+        <a
+          v-if="taskOverviewUrl"
+          class="task-overview-button"
+          :href="taskOverviewUrl"
+          target="_blank"
+          rel="noreferrer"
+        >
+          查看总详情
+        </a>
+      </div>
       <div v-if="store.currentTask" class="surface-section">
         <div class="row-inline">
           <span class="status-badge" :class="`status-${store.currentTask.status}`">
@@ -117,3 +153,57 @@ onBeforeUnmount(() => {
     <p v-if="store.errorMessage" class="error-text">{{ store.errorMessage }}</p>
   </div>
 </template>
+
+<style scoped>
+.task-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.task-overview-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid #d8d9dc;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f6f8 100%);
+  color: #111111;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 120ms ease;
+}
+
+.task-overview-button:hover {
+  border-color: #bfc2c7;
+  background: linear-gradient(180deg, #ffffff 0%, #eef1f4 100%);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.task-overview-button:active {
+  transform: translateY(1px);
+}
+
+.task-overview-button:focus-visible {
+  outline: 2px solid rgba(17, 17, 17, 0.22);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .task-detail-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+</style>

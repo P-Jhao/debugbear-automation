@@ -61,6 +61,10 @@ interface SummaryMetricRow {
 
 type DeletePerfTaskResult = 'deleted' | 'not_found' | 'running'
 type StopPerfTaskResult = 'stopped' | 'not_found' | 'not_stoppable'
+interface ListPerfTasksResult {
+  items: PerfTaskListItem[]
+  total: number
+}
 
 const toListItem = (row: PerfTaskRow): PerfTaskListItem => ({
   taskId: row.task_id,
@@ -129,50 +133,18 @@ const toRunItem = (row: PerfTaskRunRow): PerfTaskRunItem => ({
   createdAt: row.created_at
 })
 
-const EMPTY_METRIC_SUMMARY = {
-  avg: null,
-  trimmedAvg: null,
-  max: null,
-  min: null
-} as const
-
-const normalizeMetricSummary = (metric: unknown) => {
-  if (!metric || typeof metric !== 'object') {
-    return { ...EMPTY_METRIC_SUMMARY }
-  }
-
-  const maybe = metric as {
-    avg?: number | null
-    trimmedAvg?: number | null
-    max?: number | null
-    min?: number | null
-  }
-
-  return {
-    avg: typeof maybe.avg === 'number' ? maybe.avg : null,
-    trimmedAvg: typeof maybe.trimmedAvg === 'number' ? maybe.trimmedAvg : null,
-    max: typeof maybe.max === 'number' ? maybe.max : null,
-    min: typeof maybe.min === 'number' ? maybe.min : null
-  }
-}
-
-const normalizeSummary = (summary: unknown): PerfTaskSummary | null => {
-  if (!summary || typeof summary !== 'object') {
+const toDebugBearOverviewUrl = (debugBearUrl: string | null): string | null => {
+  if (!debugBearUrl) {
     return null
   }
 
-  const maybe = summary as Partial<PerfTaskSummary>
-  return {
-    lcp: normalizeMetricSummary(maybe.lcp),
-    fcp: normalizeMetricSummary(maybe.fcp),
-    inp: normalizeMetricSummary(maybe.inp),
-    tbt: normalizeMetricSummary(maybe.tbt),
-    cls: normalizeMetricSummary(maybe.cls),
-    ttfb: normalizeMetricSummary(maybe.ttfb),
-    labScore: normalizeMetricSummary(maybe.labScore),
-    pageWeight: normalizeMetricSummary(maybe.pageWeight),
-    successCount: typeof maybe.successCount === 'number' ? maybe.successCount : 0,
-    failCount: typeof maybe.failCount === 'number' ? maybe.failCount : 0
+  try {
+    const parsed = new URL(debugBearUrl)
+    parsed.search = ''
+    parsed.hash = ''
+    return parsed.toString()
+  } catch {
+    return null
   }
 }
 
@@ -229,7 +201,11 @@ export const createPerfTask = (payload: CreatePerfTaskRequest) => {
   return taskId
 }
 
-export const listPerfTasks = (filters: PerfTaskFilters): PerfTaskListItem[] => {
+export const listPerfTasks = (
+  filters: PerfTaskFilters,
+  page: number,
+  pageSize: number
+): ListPerfTasksResult => {
   const db = getPerfTaskDb()
   const clauses: string[] = []
   const params: Record<string, unknown> = {}
@@ -288,7 +264,13 @@ export const listPerfTasks = (filters: PerfTaskFilters): PerfTaskListItem[] => {
     .all(params) as PerfTaskRow[]
   const items = rows.map(toListItem)
   const filtered = filters.device ? items.filter((item) => item.device === filters.device) : items
-  return filtered.slice(0, 200)
+  const safePage = Number.isInteger(page) && page > 0 ? page : 1
+  const safePageSize = Number.isInteger(pageSize) && pageSize > 0 ? pageSize : 10
+  const offset = (safePage - 1) * safePageSize
+  return {
+    total: filtered.length,
+    items: filtered.slice(offset, offset + safePageSize)
+  }
 }
 
 export const getPerfTaskDetail = (taskId: string): PerfTaskDetailResponse | null => {
@@ -346,16 +328,29 @@ export const getPerfTaskDetail = (taskId: string): PerfTaskDetailResponse | null
       `
     )
     .all(taskId) as PerfTaskRunRow[]
+  const runs = runRows.map(toRunItem)
+  const debugBearOverviewUrl =
+    runs.map((run) => toDebugBearOverviewUrl(run.debugBearUrl)).find((url): url is string => Boolean(url)) ?? null
 
-  let summary: PerfTaskSummary | null = null
-  if (row.summary_json) {
-    summary = normalizeSummary(JSON.parse(row.summary_json))
-  }
+  const summary = buildPerfTaskSummary(
+    runRows.map((run) => ({
+      lcp: run.lcp,
+      fcp: run.fcp,
+      inp: run.inp,
+      tbt: run.tbt,
+      cls: run.cls,
+      ttfb: run.ttfb,
+      labScore: run.lab_score,
+      pageWeight: run.page_weight,
+      status: run.status
+    }))
+  )
 
   return {
     ...toListItem(row),
     summary,
-    runs: runRows.map(toRunItem),
+    runs,
+    debugBearOverviewUrl,
     remark: row.remark
   }
 }

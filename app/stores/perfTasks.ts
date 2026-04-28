@@ -34,6 +34,10 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
   const currentTask = ref<PerfTaskDetailResponse | null>(null)
   const versions = ref<string[]>([])
   const groups = ref<string[]>([])
+  const total = ref(0)
+  const page = ref(1)
+  const pageSize = ref(10)
+  const totalPages = ref(1)
   const loading = ref(false)
   const errorMessage = ref<string | null>(null)
 
@@ -43,7 +47,11 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
     try {
       const data = await api.listTasks(filters)
       tasks.value = data.items
-      return data.items
+      total.value = data.total
+      page.value = data.page
+      pageSize.value = data.pageSize
+      totalPages.value = data.totalPages
+      return data
     } catch (error) {
       errorMessage.value = getReadableError(error, '加载任务列表失败')
       throw error
@@ -143,6 +151,10 @@ export const usePerfTasksStore = defineStore('perfTasks', () => {
     currentTask,
     versions,
     groups,
+    total,
+    page,
+    pageSize,
+    totalPages,
     loading,
     errorMessage,
     isTerminalTask,

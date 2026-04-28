@@ -14,6 +14,8 @@ const deviceSet = new Set(['mobile', 'desktop'])
 export default defineEventHandler((event) => {
   const query = getQuery(event)
   const filters: PerfTaskFilters = {}
+  let page = 1
+  let pageSize = 10
 
   if (typeof query.url === 'string' && query.url.trim()) {
     filters.url = query.url.trim()
@@ -36,8 +38,29 @@ export default defineEventHandler((event) => {
   if (typeof query.dateTo === 'string' && query.dateTo.trim()) {
     filters.dateTo = query.dateTo.trim()
   }
+  if (typeof query.page === 'string') {
+    const parsedPage = Number.parseInt(query.page, 10)
+    if (Number.isInteger(parsedPage) && parsedPage > 0) {
+      page = parsedPage
+    }
+  }
+  if (typeof query.pageSize === 'string') {
+    const parsedPageSize = Number.parseInt(query.pageSize, 10)
+    if (Number.isInteger(parsedPageSize) && parsedPageSize > 0) {
+      pageSize = Math.min(parsedPageSize, 100)
+    }
+  }
+
+  filters.page = page
+  filters.pageSize = pageSize
+  const { items, total } = listPerfTasks(filters, page, pageSize)
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   return {
-    items: listPerfTasks(filters)
+    items,
+    total,
+    page,
+    pageSize,
+    totalPages
   }
 })
