@@ -273,6 +273,7 @@ export const listPerfTasks = (filters: PerfTaskFilters): PerfTaskListItem[] => {
         progress_count,
         success_count,
         fail_count,
+        config_json,
         error_message,
         summary_json,
         remark,

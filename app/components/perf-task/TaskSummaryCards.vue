@@ -5,18 +5,18 @@ defineProps<{
   summary: PerfTaskSummary | null
 }>()
 
-const formatMetric = (value: number | null) => {
+const formatMetric = (value: number | null, digits = 2) => {
   if (value === null) {
     return '-'
   }
-  return value.toFixed(2)
+  return value.toFixed(digits)
 }
 
-const items = (metric: MetricSummary) => [
-  { label: '平均值', value: formatMetric(metric.avg) },
-  { label: '去极值平均', value: formatMetric(metric.trimmedAvg) },
-  { label: '最大值', value: formatMetric(metric.max) },
-  { label: '最小值', value: formatMetric(metric.min) }
+const items = (metric: MetricSummary, digits = 2) => [
+  { label: '平均值', value: formatMetric(metric.avg, digits) },
+  { label: '去极值平均', value: formatMetric(metric.trimmedAvg, digits) },
+  { label: '最大值', value: formatMetric(metric.max, digits) },
+  { label: '最小值', value: formatMetric(metric.min, digits) }
 ]
 
 const getMetric = (metric: MetricSummary | undefined): MetricSummary => {
@@ -79,7 +79,7 @@ const getMetric = (metric: MetricSummary | undefined): MetricSummary => {
       <div>
         <h3 class="section-subtitle">CLS</h3>
         <div class="metric-grid">
-          <div v-for="item in items(getMetric(summary.cls))" :key="`cls-${item.label}`" class="metric-card">
+          <div v-for="item in items(getMetric(summary.cls), 3)" :key="`cls-${item.label}`" class="metric-card">
             <div class="metric-label">{{ item.label }}</div>
             <div class="metric-value">{{ item.value }}</div>
           </div>

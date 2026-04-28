@@ -14,7 +14,21 @@ defineProps<{
     </div>
 
     <div class="table-wrap">
-      <table>
+      <table class="run-table">
+        <colgroup>
+          <col style="width: 64px" />
+          <col style="width: 88px" />
+          <col style="width: 72px" />
+          <col style="width: 72px" />
+          <col style="width: 72px" />
+          <col style="width: 72px" />
+          <col style="width: 72px" />
+          <col style="width: 96px" />
+          <col style="width: 110px" />
+          <col style="width: 180px" />
+          <col />
+          <col style="width: 76px" />
+        </colgroup>
         <thead>
           <tr>
             <th>序号</th>
@@ -76,10 +90,15 @@ defineProps<{
 </template>
 
 <style scoped>
+.run-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
 .error-column-header,
 .error-column-cell {
-  width: 240px;
-  max-width: 240px;
+  white-space: normal;
 }
 
 .error-message-text {
