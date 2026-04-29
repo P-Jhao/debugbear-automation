@@ -3,6 +3,7 @@ interface ComboboxOption {
   label: string
   value: string
 }
+import closeIcon from '~/assets/icons/close_small.svg'
 
 const props = withDefaults(
   defineProps<{
@@ -43,6 +44,11 @@ const onInputClick = () => {
   isOpen.value = true
 }
 
+const onClear = () => {
+  emit('update:modelValue', '')
+  isOpen.value = true
+}
+
 const onSelect = (option: ComboboxOption) => {
   emit('update:modelValue', option.label)
   emit('select', option)
@@ -70,20 +76,13 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="rootRef" class="filter-combobox">
-    <input
-      :id="inputId"
-      :value="modelValue"
-      type="text"
-      :placeholder="placeholder"
-      autocomplete="off"
-      @click="onInputClick"
-      @input="onInput"
-    />
-    <ul
-      v-if="isOpen && filteredOptions.length > 0"
-      class="filter-combobox-options"
-      role="listbox"
-    >
+    <input :id="inputId" :value="modelValue" type="text" class="filter-combobox-input" :placeholder="placeholder"
+      autocomplete="off" @click="onInputClick" @input="onInput" />
+    <button v-if="modelValue" type="button" class="filter-combobox-clear" aria-label="清空输入" @mousedown.prevent
+      @click="onClear">
+      <img :src="closeIcon" alt="" />
+    </button>
+    <ul v-if="isOpen && filteredOptions.length > 0" class="filter-combobox-options" role="listbox">
       <li v-for="item in filteredOptions" :key="item.value">
         <button type="button" @mousedown.prevent="onSelect(item)">
           {{ item.label }}
@@ -96,6 +95,38 @@ onBeforeUnmount(() => {
 <style scoped>
 .filter-combobox {
   position: relative;
+}
+
+.filter-combobox-input {
+  padding-right: 28px;
+}
+
+.filter-combobox-clear {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 999px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  padding: 0;
+  text-align: center;
+  cursor: pointer;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.filter-combobox-clear:hover {
+  background: #d1d5db;
+}
+
+.filter-combobox-clear img {
+  width: 12px;
+  height: 12px;
+  display: block;
+  margin: 0 auto;
 }
 
 .filter-combobox-options {
