@@ -660,6 +660,43 @@ export const listDistinctGroups = () => {
   return rows.map((row) => row.task_group)
 }
 
+export const listDistinctUrls = (keyword?: string, limit = 100) => {
+  const db = getPerfTaskDb()
+  const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 500) : 100
+  const normalizedKeyword = keyword?.trim()
+
+  if (normalizedKeyword) {
+    const rows = db
+      .prepare(
+        `
+      SELECT DISTINCT url
+      FROM perf_tasks
+      WHERE url LIKE @keyword
+      ORDER BY created_at DESC
+      LIMIT @limit;
+      `
+      )
+      .all({
+        keyword: `%${normalizedKeyword}%`,
+        limit: safeLimit
+      }) as Array<{ url: string }>
+    return rows.map((row) => row.url)
+  }
+
+  const rows = db
+    .prepare(
+      `
+      SELECT DISTINCT url
+      FROM perf_tasks
+      ORDER BY created_at DESC
+      LIMIT ?;
+      `
+    )
+    .all(safeLimit) as Array<{ url: string }>
+
+  return rows.map((row) => row.url)
+}
+
 export const deletePerfTask = (taskId: string): DeletePerfTaskResult => {
   const db = getPerfTaskDb()
 

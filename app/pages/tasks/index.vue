@@ -2,18 +2,27 @@
 import type { PerfTaskFilters } from '~/shared/types/perfTask'
 
 const store = usePerfTasksStore()
+const api = usePerfTasksApi()
 const DEFAULT_PAGE_SIZE = 10
 const PAGE_SIZE_STORAGE_KEY = 'perf_tasks_page_size'
 const allowedPageSizes = new Set([5, 10, 20])
+const urlOptions = ref<string[]>([])
 const activeFilters = ref<PerfTaskFilters>({
   page: 1,
   pageSize: DEFAULT_PAGE_SIZE
 })
 
 const loadData = async () => {
-  await store.fetchVersions()
-  await store.fetchGroups()
-  await store.fetchTasks(activeFilters.value)
+  const [versionsResult, groupsResult, tasksResult, urlsResult] = await Promise.all([
+    store.fetchVersions(),
+    store.fetchGroups(),
+    store.fetchTasks(activeFilters.value),
+    api.listUrls(undefined, 300)
+  ])
+  void versionsResult
+  void groupsResult
+  void tasksResult
+  urlOptions.value = urlsResult.items
 }
 
 const onSearch = async (filters: PerfTaskFilters) => {
@@ -92,6 +101,7 @@ await loadData()
     <TaskFilters
       :versions="store.versions"
       :groups="store.groups"
+      :urls="urlOptions"
       @search="onSearch"
       @version-change="onVersionChange"
     />

@@ -38,6 +38,14 @@ export const usePerfTasksApi = () => {
       ? $fetch<{ items: string[] }>(`/api/versions/${encodeURIComponent(version)}/groups`)
       : $fetch<{ items: string[] }>('/api/versions/groups')
 
+  const listUrls = (keyword?: string, limit = 100) =>
+    $fetch<{ items: string[] }>('/api/perf-tasks/urls', {
+      query: {
+        keyword,
+        limit
+      }
+    })
+
   return {
     createTask,
     listTasks,
@@ -45,6 +53,7 @@ export const usePerfTasksApi = () => {
     deleteTask,
     stopTask,
     listVersions,
-    listGroups
+    listGroups,
+    listUrls
   }
 }

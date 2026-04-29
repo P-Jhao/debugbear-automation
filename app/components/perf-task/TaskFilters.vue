@@ -4,6 +4,7 @@ import type { PerfTaskFilters, PerfTaskStatus } from '~/shared/types/perfTask'
 const props = defineProps<{
   versions: string[]
   groups: string[]
+  urls: string[]
 }>()
 
 const emit = defineEmits<{
@@ -28,6 +29,8 @@ const createDefaultFilters = (): TaskFiltersForm => ({
 })
 
 const filters = reactive<TaskFiltersForm>(createDefaultFilters())
+const isUrlDropdownOpen = ref(false)
+const urlComboboxRef = ref<HTMLElement | null>(null)
 
 const statuses: Array<{ label: string; value: PerfTaskStatus | '' }> = [
   { label: '全部状态', value: '' },
@@ -57,8 +60,44 @@ const onSearch = () => {
 const onReset = () => {
   Object.assign(filters, createDefaultFilters())
   emit('versionChange', '')
+  isUrlDropdownOpen.value = false
   onSearch()
 }
+
+const filteredUrlOptions = computed(() => {
+  const keyword = filters.url.trim().toLowerCase()
+  if (!keyword) {
+    return props.urls.slice(0, 20)
+  }
+  return props.urls.filter((item) => item.toLowerCase().includes(keyword)).slice(0, 20)
+})
+
+const onSelectUrlOption = (url: string) => {
+  filters.url = url
+  isUrlDropdownOpen.value = false
+}
+
+const onUrlInputClick = () => {
+  isUrlDropdownOpen.value = true
+}
+
+const handleDocumentClick = (event: MouseEvent) => {
+  if (!urlComboboxRef.value) {
+    return
+  }
+  const target = event.target
+  if (target instanceof Node && !urlComboboxRef.value.contains(target)) {
+    isUrlDropdownOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleDocumentClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
+})
 </script>
 
 <template>
@@ -74,7 +113,27 @@ const onReset = () => {
     <div class="form-grid">
       <div class="form-field">
         <label for="f-url">URL 关键字</label>
-        <input id="f-url" v-model="filters.url" type="text" placeholder="example.com" />
+        <div ref="urlComboboxRef" class="url-combobox">
+          <input
+            id="f-url"
+            v-model="filters.url"
+            type="text"
+            placeholder="example.com"
+            autocomplete="off"
+            @click="onUrlInputClick"
+          />
+          <ul
+            v-if="isUrlDropdownOpen && filteredUrlOptions.length > 0"
+            class="url-options"
+            role="listbox"
+          >
+            <li v-for="item in filteredUrlOptions" :key="item">
+              <button type="button" @mousedown.prevent="onSelectUrlOption(item)">
+                {{ item }}
+              </button>
+            </li>
+          </ul>
+        </div>
       </div>
 
       <div class="form-field">
@@ -111,3 +170,39 @@ const onReset = () => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.url-combobox {
+  position: relative;
+}
+
+.url-options {
+  position: absolute;
+  z-index: 10;
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.url-options button {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: #111827;
+}
+
+.url-options button:hover {
+  background: #f3f4f6;
+}
+</style>
