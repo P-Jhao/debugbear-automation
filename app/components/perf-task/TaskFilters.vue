@@ -30,7 +30,9 @@ const createDefaultFilters = (): TaskFiltersForm => ({
 
 const filters = reactive<TaskFiltersForm>(createDefaultFilters())
 const isUrlDropdownOpen = ref(false)
+const isVersionDropdownOpen = ref(false)
 const urlComboboxRef = ref<HTMLElement | null>(null)
+const versionComboboxRef = ref<HTMLElement | null>(null)
 
 const statuses: Array<{ label: string; value: PerfTaskStatus | '' }> = [
   { label: '全部状态', value: '' },
@@ -61,6 +63,7 @@ const onReset = () => {
   Object.assign(filters, createDefaultFilters())
   emit('versionChange', '')
   isUrlDropdownOpen.value = false
+  isVersionDropdownOpen.value = false
   onSearch()
 }
 
@@ -81,13 +84,34 @@ const onUrlInputClick = () => {
   isUrlDropdownOpen.value = true
 }
 
+const filteredVersionOptions = computed(() => {
+  const keyword = filters.version.trim().toLowerCase()
+  if (!keyword) {
+    return props.versions.slice(0, 20)
+  }
+  return props.versions.filter((item) => item.toLowerCase().includes(keyword)).slice(0, 20)
+})
+
+const onVersionInputClick = () => {
+  isVersionDropdownOpen.value = true
+}
+
+const onSelectVersionOption = (version: string) => {
+  filters.version = version
+  isVersionDropdownOpen.value = false
+  onVersionChange()
+}
+
 const handleDocumentClick = (event: MouseEvent) => {
-  if (!urlComboboxRef.value) {
+  const target = event.target
+  if (!(target instanceof Node)) {
     return
   }
-  const target = event.target
-  if (target instanceof Node && !urlComboboxRef.value.contains(target)) {
+  if (urlComboboxRef.value && !urlComboboxRef.value.contains(target)) {
     isUrlDropdownOpen.value = false
+  }
+  if (versionComboboxRef.value && !versionComboboxRef.value.contains(target)) {
+    isVersionDropdownOpen.value = false
   }
 }
 
@@ -145,10 +169,28 @@ onBeforeUnmount(() => {
 
       <div class="form-field">
         <label for="f-version">版本</label>
-        <select id="f-version" v-model="filters.version" @change="onVersionChange">
-          <option value="">全部版本</option>
-          <option v-for="item in props.versions" :key="item" :value="item">{{ item }}</option>
-        </select>
+        <div ref="versionComboboxRef" class="url-combobox">
+          <input
+            id="f-version"
+            v-model="filters.version"
+            type="text"
+            placeholder="全部版本"
+            autocomplete="off"
+            @click="onVersionInputClick"
+            @input="onVersionChange"
+          />
+          <ul
+            v-if="isVersionDropdownOpen && filteredVersionOptions.length > 0"
+            class="url-options"
+            role="listbox"
+          >
+            <li v-for="item in filteredVersionOptions" :key="item">
+              <button type="button" @mousedown.prevent="onSelectVersionOption(item)">
+                {{ item }}
+              </button>
+            </li>
+          </ul>
+        </div>
       </div>
 
       <div class="form-field">
