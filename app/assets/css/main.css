@@ -65,6 +65,9 @@ a {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
   font-family:
     "Lyon Text",
     "Newsreader",
@@ -74,6 +77,14 @@ a {
   font-size: 1.4rem;
   line-height: 1.1;
   letter-spacing: -0.03em;
+}
+
+.brand-version {
+  font-family: "Geist Mono", "SF Mono", "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
 }
 
 .header-nav {
