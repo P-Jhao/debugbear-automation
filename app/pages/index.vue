@@ -2,8 +2,23 @@
 import type { CreatePerfTaskRequest } from '~/shared/types/perfTask'
 
 const store = usePerfTasksStore()
+const api = usePerfTasksApi()
 const router = useRouter()
 const errorText = ref<string | null>(null)
+const urlOptions = ref<string[]>([])
+const versionOptions = ref<string[]>([])
+const groupOptions = ref<string[]>([])
+
+const loadCreateOptions = async () => {
+  const [urlsData, versionsData, groupsData] = await Promise.all([
+    api.listUrls(undefined, 300),
+    api.listVersions(),
+    api.listGroups()
+  ])
+  urlOptions.value = urlsData.items
+  versionOptions.value = versionsData.items
+  groupOptions.value = groupsData.items
+}
 
 const handleCreateTask = async (payload: CreatePerfTaskRequest) => {
   errorText.value = null
@@ -18,11 +33,19 @@ const handleCreateTask = async (payload: CreatePerfTaskRequest) => {
     errorText.value = error instanceof Error ? error.message : '创建任务失败'
   }
 }
+
+await loadCreateOptions()
 </script>
 
 <template>
   <div class="page-stack">
-    <TaskCreateForm :loading="store.loading" @submit="handleCreateTask" />
+    <TaskCreateForm
+      :loading="store.loading"
+      :url-options="urlOptions"
+      :version-options="versionOptions"
+      :group-options="groupOptions"
+      @submit="handleCreateTask"
+    />
     <p v-if="errorText" class="error-text">{{ errorText }}</p>
   </div>
 </template>

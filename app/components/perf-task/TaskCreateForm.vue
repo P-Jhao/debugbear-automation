@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import type { CreatePerfTaskRequest } from '~/shared/types/perfTask'
+import FilterCombobox from './FilterCombobox.vue'
 
 const props = defineProps<{
   loading?: boolean
+  urlOptions: string[]
+  versionOptions: string[]
+  groupOptions: string[]
 }>()
 
 const emit = defineEmits<{
@@ -33,6 +37,27 @@ const selectedDevices = computed<Array<'mobile' | 'desktop'>>(() =>
 )
 
 const validationError = ref<string | null>(null)
+const urlKeyword = ref('')
+const versionKeyword = ref('')
+const groupKeyword = ref('')
+
+const urlComboboxOptions = computed(() => props.urlOptions.map((item) => ({ label: item, value: item })))
+const versionComboboxOptions = computed(() =>
+  props.versionOptions.map((item) => ({ label: item, value: item }))
+)
+const groupComboboxOptions = computed(() => props.groupOptions.map((item) => ({ label: item, value: item })))
+
+watch(urlKeyword, (value) => {
+  form.url = value
+})
+
+watch(versionKeyword, (value) => {
+  form.version = value
+})
+
+watch(groupKeyword, (value) => {
+  form.group = value
+})
 
 watch(
   () => form.count,
@@ -54,6 +79,9 @@ onMounted(() => {
     return
   }
   form.count = parsed
+  urlKeyword.value = form.url
+  versionKeyword.value = form.version
+  groupKeyword.value = form.group
 })
 
 const submitForm = () => {
@@ -101,7 +129,12 @@ const submitForm = () => {
     <form class="form-grid" @submit.prevent="submitForm">
       <div class="form-field" style="grid-column: 1 / -1">
         <label for="task-url">目标 URL</label>
-        <input id="task-url" v-model="form.url" type="url" placeholder="https://example.com" required />
+        <FilterCombobox
+          input-id="task-url"
+          v-model="urlKeyword"
+          :options="urlComboboxOptions"
+          placeholder="https://example.com"
+        />
       </div>
 
       <div class="form-field">
@@ -111,12 +144,22 @@ const submitForm = () => {
 
       <div class="form-field">
         <label for="task-version">版本</label>
-        <input id="task-version" v-model="form.version" type="text" placeholder="v1.0.0" required />
+        <FilterCombobox
+          input-id="task-version"
+          v-model="versionKeyword"
+          :options="versionComboboxOptions"
+          placeholder="v1.0.0"
+        />
       </div>
 
       <div class="form-field">
         <label for="task-group">分组</label>
-        <input id="task-group" v-model="form.group" type="text" placeholder="homepage" required />
+        <FilterCombobox
+          input-id="task-group"
+          v-model="groupKeyword"
+          :options="groupComboboxOptions"
+          placeholder="homepage"
+        />
       </div>
 
       <div class="form-field" style="grid-column: 1 / -1">
