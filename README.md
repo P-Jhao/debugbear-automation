@@ -1,75 +1,46 @@
-# Nuxt Minimal Starter
+# DebugBear Automation
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Nuxt-based DebugBear batch performance testing tool.
 
-## Setup
+## Requirements
 
-Make sure to install dependencies:
+- Node.js 20+
+- pnpm
+
+## Local development
 
 ```bash
-# npm
-npm install
-
-# pnpm
 pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
-npm run dev
-
-# pnpm
 pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
-
-Build the application for production:
+## Build web server output
 
 ```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
+pnpm build:web
 ```
 
-Locally preview production build:
+## Desktop packaging (Electron)
+
+The desktop app bundles Electron + Nuxt server output. End users do not need to install Node/pnpm.
+
+### Build macOS Apple Silicon package
 
 ```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
+pnpm dist:mac
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+Artifacts are generated under `dist/` (`.dmg` and `.zip`, `arm64` only).
+
+### Build Windows package
+
+```bash
+pnpm dist:win
+```
+
+Artifacts are generated under `dist/` (`nsis` installer and `portable`).
+
+## Notes for unsigned macOS builds
+
+- First run may be blocked by Gatekeeper.
+- Open with Finder right-click -> Open, then confirm.

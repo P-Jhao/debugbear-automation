@@ -10,14 +10,18 @@ const versionOptions = ref<string[]>([])
 const groupOptions = ref<string[]>([])
 
 const loadCreateOptions = async () => {
-  const [urlsData, versionsData, groupsData] = await Promise.all([
-    api.listUrls(undefined, 300),
-    api.listVersions(),
-    api.listGroups()
-  ])
-  urlOptions.value = urlsData.items
-  versionOptions.value = versionsData.items
-  groupOptions.value = groupsData.items
+  try {
+    const [urlsData, versionsData, groupsData] = await Promise.all([
+      api.listUrls(undefined, 300),
+      api.listVersions(),
+      api.listGroups()
+    ])
+    urlOptions.value = urlsData.items
+    versionOptions.value = versionsData.items
+    groupOptions.value = groupsData.items
+  } catch (error) {
+    errorText.value = error instanceof Error ? error.message : '初始化数据加载失败'
+  }
 }
 
 const handleCreateTask = async (payload: CreatePerfTaskRequest) => {
@@ -34,7 +38,9 @@ const handleCreateTask = async (payload: CreatePerfTaskRequest) => {
   }
 }
 
-await loadCreateOptions()
+onMounted(() => {
+  void loadCreateOptions()
+})
 </script>
 
 <template>

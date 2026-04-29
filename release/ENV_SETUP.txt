@@ -1,0 +1,35 @@
+DebugBear Automation 配置说明
+
+1) 必填项（至少满足以下条件）
+- DEBUGBEAR_API_KEY：必填
+- DEBUGBEAR_PAGE_ID 或 DEBUGBEAR_PROJECT_ID：二选一，至少填一个
+
+2) .env 文件放置路径
+- Windows: %APPDATA%\debugbear-automation\.env
+  示例: C:\Users\<你的用户名>\AppData\Roaming\debugbear-automation\.env
+
+- macOS: ~/Library/Application Support/debugbear-automation/.env
+  示例: /Users/<你的用户名>/Library/Application Support/debugbear-automation/.env
+
+3) 最小可用示例
+DEBUGBEAR_API_KEY=你的key
+DEBUGBEAR_PAGE_ID=123456
+
+（或）
+DEBUGBEAR_API_KEY=你的key
+DEBUGBEAR_PROJECT_ID=123456
+
+4) 可选项（不填会使用默认值）
+- DEBUGBEAR_API_BASE_URL（默认: https://www.debugbear.com/api/v1）
+- PERF_TASK_DEFAULT_COUNT（默认: 12）
+- PERF_TASK_MIN_COUNT（默认: 3）
+- PERF_TASK_MAX_COUNT（默认: 30）
+- PERF_TASK_CONCURRENCY（默认: 2）
+- PERF_TASK_RETRY_COUNT（默认: 1）
+- PERF_TASK_POLL_INTERVAL_MS（默认: 3000）
+
+5) 可留空/非必需
+- DEBUGBEAR_API_KEY_TYPE（当前应用运行不是必需）
+
+6) 变更 .env 后
+- 关闭并重新打开应用后生效。

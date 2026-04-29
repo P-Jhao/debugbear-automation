@@ -1,13 +1,20 @@
 {
   "name": "debugbear-automation",
+  "version": "0.1.0",
+  "description": "Desktop-ready DebugBear batch automation tool",
   "type": "module",
   "private": true,
+  "main": "electron/main.mjs",
   "scripts": {
     "build": "nuxt build",
+    "build:web": "nuxt build",
     "dev": "nuxt dev",
+    "dev:desktop": "pnpm build:web && electron .",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "dist:mac": "pnpm build:web && electron-builder --mac dmg zip --arm64",
+    "dist:win": "pnpm build:web && electron-builder --win nsis portable --x64"
   },
   "dependencies": {
     "@pinia/nuxt": "^0.11.2",
@@ -17,6 +24,67 @@
     "vue": "^3.5.32",
     "vue-router": "^5.0.4",
     "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "electron": "37.10.3",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.fangyi.debugbear.automation",
+    "productName": "DebugBear Automation",
+    "asar": true,
+    "files": [
+      "electron/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": ".output",
+        "to": ".output"
+      }
+    ],
+    "extraFiles": [
+      {
+        "from": "release/ENV_SETUP.txt",
+        "to": "ENV_SETUP.txt"
+      }
+    ],
+    "directories": {
+      "buildResources": "build"
+    },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
   }
 }
-

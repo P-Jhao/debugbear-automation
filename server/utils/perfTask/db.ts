@@ -1,5 +1,6 @@
 import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
+import os from 'node:os'
 import { DatabaseSync } from 'node:sqlite'
 
 let dbInstance: DatabaseSync | null = null
@@ -70,12 +71,37 @@ const ensureSchema = (db: DatabaseSync) => {
   ensureColumn(db, 'perf_task_runs', 'page_weight', 'REAL')
 }
 
+const resolveDefaultDataDir = () => {
+  switch (process.platform) {
+    case 'win32':
+      return resolve(process.env.APPDATA ?? resolve(os.homedir(), 'AppData', 'Roaming'), 'debugbear-automation', '.data')
+    case 'darwin':
+      return resolve(os.homedir(), 'Library', 'Application Support', 'debugbear-automation', '.data')
+    default:
+      return resolve(os.homedir(), '.local', 'share', 'debugbear-automation', '.data')
+  }
+}
+
+const resolvePerfTaskDbPath = () => {
+  const envDir = process.env.PERF_TASK_DATA_DIR?.trim()
+  if (envDir) {
+    return resolve(envDir, 'perf-tasks.db')
+  }
+
+  // Keep development behavior unchanged when no explicit data dir is provided.
+  if (!process.env.ELECTRON_RUN_AS_NODE) {
+    return resolve(process.cwd(), '.data', 'perf-tasks.db')
+  }
+
+  return resolve(resolveDefaultDataDir(), 'perf-tasks.db')
+}
+
 export const getPerfTaskDb = () => {
   if (dbInstance) {
     return dbInstance
   }
 
-  const dbPath = resolve(process.cwd(), '.data', 'perf-tasks.db')
+  const dbPath = resolvePerfTaskDbPath()
   mkdirSync(dirname(dbPath), { recursive: true })
   const db = new DatabaseSync(dbPath)
   db.exec('PRAGMA journal_mode = WAL;')
