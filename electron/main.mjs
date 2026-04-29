@@ -57,9 +57,11 @@ function parseDotEnvFile(filePath) {
   return result
 }
 
-function resolveUserEnvPath() {
-  const appDataRoot = app.getPath('appData')
-  return path.join(appDataRoot, 'debugbear-automation', '.env')
+function resolveEnvPath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, '.env')
+  }
+  return path.join(__dirname, '..', '.env')
 }
 
 function resolveServerEntry() {
@@ -72,11 +74,11 @@ function resolveServerEntry() {
 function startNuxtServer() {
   const serverEntry = resolveServerEntry()
   const perfTaskDataDir = resolvePerfTaskDataDir()
-  const userEnv = parseDotEnvFile(resolveUserEnvPath())
+  const packagedEnv = parseDotEnvFile(resolveEnvPath())
   nuxtProcess = spawn(process.execPath, [serverEntry], {
     env: {
       ...process.env,
-      ...userEnv,
+      ...packagedEnv,
       ELECTRON_RUN_AS_NODE: '1',
       HOST,
       PORT: String(serverPort),
