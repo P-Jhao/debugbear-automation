@@ -3,7 +3,9 @@ import type { PerfTaskFilters } from '~/shared/types/perfTask'
 
 const store = usePerfTasksStore()
 const api = usePerfTasksApi()
+const runtimeConfig = useRuntimeConfig()
 const DEFAULT_PAGE_SIZE = 10
+const DEFAULT_POLL_INTERVAL_MS = 5000
 const PAGE_SIZE_STORAGE_KEY = 'perf_tasks_page_size'
 const allowedPageSizes = new Set([5, 10, 20])
 const urlOptions = ref<string[]>([])
@@ -11,6 +13,62 @@ const activeFilters = ref<PerfTaskFilters>({
   page: 1,
   pageSize: DEFAULT_PAGE_SIZE
 })
+let pollTimer: ReturnType<typeof setTimeout> | null = null
+let isPolling = false
+
+const getPollIntervalMs = () => {
+  const raw = Number(runtimeConfig.public.perfTaskPollIntervalMs)
+  if (!Number.isFinite(raw) || raw <= 0) {
+    return DEFAULT_POLL_INTERVAL_MS
+  }
+  return Math.floor(raw)
+}
+
+const hasActiveTasks = () => {
+  return store.tasks.some(task => task.status === 'pending' || task.status === 'running')
+}
+
+const stopPolling = () => {
+  if (pollTimer) {
+    clearTimeout(pollTimer)
+    pollTimer = null
+  }
+}
+
+const pollTasks = async () => {
+  if (isPolling) {
+    return
+  }
+  isPolling = true
+  try {
+    await store.fetchTasks(activeFilters.value)
+  }
+  finally {
+    isPolling = false
+  }
+
+  if (!hasActiveTasks()) {
+    stopPolling()
+    return
+  }
+
+  pollTimer = setTimeout(() => {
+    void pollTasks()
+  }, getPollIntervalMs())
+}
+
+const updatePollingState = () => {
+  if (!hasActiveTasks()) {
+    stopPolling()
+    return
+  }
+  if (pollTimer || isPolling) {
+    return
+  }
+  pollTimer = setTimeout(() => {
+    void pollTasks()
+  }, getPollIntervalMs())
+}
 
 const loadData = async () => {
   const [versionsResult, groupsResult, tasksResult, urlsResult] = await Promise.all([
@@ -32,6 +90,7 @@ const onSearch = async (filters: PerfTaskFilters) => {
     pageSize: activeFilters.value.pageSize ?? DEFAULT_PAGE_SIZE
   }
   await store.fetchTasks(activeFilters.value)
+  updatePollingState()
 }
 
 const onVersionChange = async (version: string) => {
@@ -44,6 +103,7 @@ const onStopTask = async (taskId: string) => {
   }
   await store.stopTask(taskId)
   await store.fetchTasks(activeFilters.value)
+  updatePollingState()
 }
 
 const onDeleteTask = async (taskId: string) => {
@@ -52,6 +112,7 @@ const onDeleteTask = async (taskId: string) => {
   }
   await store.deleteTask(taskId)
   await store.fetchTasks(activeFilters.value)
+  updatePollingState()
 }
 
 const onPageChange = async (nextPage: number) => {
@@ -61,6 +122,7 @@ const onPageChange = async (nextPage: number) => {
     pageSize: activeFilters.value.pageSize ?? DEFAULT_PAGE_SIZE
   }
   await store.fetchTasks(activeFilters.value)
+  updatePollingState()
 }
 
 const onPageSizeChange = async (nextPageSize: number) => {
@@ -74,6 +136,7 @@ const onPageSizeChange = async (nextPageSize: number) => {
   }
   localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(nextPageSize))
   await store.fetchTasks(activeFilters.value)
+  updatePollingState()
 }
 
 onMounted(async () => {
@@ -91,9 +154,15 @@ onMounted(async () => {
     pageSize: parsed
   }
   await store.fetchTasks(activeFilters.value)
+  updatePollingState()
+})
+
+onUnmounted(() => {
+  stopPolling()
 })
 
 await loadData()
+updatePollingState()
 </script>
 
 <template>
