@@ -71,6 +71,7 @@
       ]
     },
     "win": {
+      "icon": "public/debugbearFavicon.ico",
       "target": [
         {
           "target": "nsis",
@@ -85,6 +86,11 @@
           ]
         }
       ]
+    }
+    ,
+    "nsis": {
+      "installerIcon": "public/debugbearFavicon.ico",
+      "uninstallerIcon": "public/debugbearFavicon.ico"
     }
   }
 }

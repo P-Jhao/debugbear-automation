@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog, shell } from 'electron'
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import net from 'node:net'
@@ -85,7 +85,16 @@ function startNuxtServer() {
       NODE_ENV: 'production',
       PERF_TASK_DATA_DIR: perfTaskDataDir
     },
-    stdio: 'inherit'
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe']
+  })
+
+  nuxtProcess.stdout?.on('data', (chunk) => {
+    process.stdout.write(chunk)
+  })
+
+  nuxtProcess.stderr?.on('data', (chunk) => {
+    process.stderr.write(chunk)
   })
 
   nuxtProcess.once('exit', (code) => {
@@ -158,6 +167,30 @@ function createWindow() {
       sandbox: true,
       nodeIntegration: false,
       preload: path.join(__dirname, 'preload.mjs')
+    }
+  })
+
+  const isInternalUrl = (targetUrl) => {
+    try {
+      const parsed = new URL(targetUrl)
+      return parsed.hostname === HOST && parsed.port === String(serverPort)
+    } catch {
+      return false
+    }
+  }
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (!isInternalUrl(url)) {
+      shell.openExternal(url)
+      return { action: 'deny' }
+    }
+    return { action: 'allow' }
+  })
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!isInternalUrl(url)) {
+      event.preventDefault()
+      shell.openExternal(url)
     }
   })
 
