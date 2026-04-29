@@ -9,9 +9,14 @@ const emit = defineEmits<{
   submit: [payload: CreatePerfTaskRequest]
 }>()
 
+const DEFAULT_TEST_COUNT = 12
+const TEST_COUNT_STORAGE_KEY = 'perf_task_test_count'
+const MIN_TEST_COUNT = 3
+const MAX_TEST_COUNT = 30
+
 const form = reactive<CreatePerfTaskRequest>({
   url: '',
-  count: 12,
+  count: DEFAULT_TEST_COUNT,
   version: '',
   group: ''
 })
@@ -29,6 +34,28 @@ const selectedDevices = computed<Array<'mobile' | 'desktop'>>(() =>
 
 const validationError = ref<string | null>(null)
 
+watch(
+  () => form.count,
+  (count) => {
+    if (!Number.isInteger(count) || count < MIN_TEST_COUNT || count > MAX_TEST_COUNT) {
+      return
+    }
+    localStorage.setItem(TEST_COUNT_STORAGE_KEY, String(count))
+  }
+)
+
+onMounted(() => {
+  const raw = localStorage.getItem(TEST_COUNT_STORAGE_KEY)
+  if (!raw) {
+    return
+  }
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isInteger(parsed) || parsed < MIN_TEST_COUNT || parsed > MAX_TEST_COUNT) {
+    return
+  }
+  form.count = parsed
+})
+
 const submitForm = () => {
   validationError.value = null
 
@@ -36,8 +63,8 @@ const submitForm = () => {
     validationError.value = '请输入合法的 HTTP/HTTPS 地址'
     return
   }
-  if (form.count < 3 || form.count > 30) {
-    validationError.value = '测试次数需要在 3 到 30 之间'
+  if (form.count < MIN_TEST_COUNT || form.count > MAX_TEST_COUNT) {
+    validationError.value = `测试次数需要在 ${MIN_TEST_COUNT} 到 ${MAX_TEST_COUNT} 之间`
     return
   }
   if (!form.version.trim() || !form.group.trim()) {
