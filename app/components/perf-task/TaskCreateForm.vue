@@ -71,7 +71,7 @@ const isElectronRuntime = computed(() => {
   return navigator.userAgent.includes('Electron')
 })
 
-const isDesktopApp = computed(() => isElectronRuntime.value || desktopEnvBridge.value?.isDesktop === true)
+const isDesktopApp = computed(() => isElectronRuntime.value && desktopEnvBridge.value?.isDesktop === true)
 const shouldShowDesktopConfigButton = computed(() => isClientMounted.value && isDesktopApp.value)
 
 const urlComboboxOptions = computed(() => props.urlOptions.map((item) => ({ label: item, value: item })))
