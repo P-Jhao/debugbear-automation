@@ -1,6 +1,6 @@
-import { app, BrowserWindow, dialog, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import net from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -57,6 +57,25 @@ function parseDotEnvFile(filePath) {
   return result
 }
 
+function stringifyDotEnvValue(value) {
+  return String(value ?? '').replace(/\r?\n/g, ' ').trim()
+}
+
+function upsertDotEnvValue(filePath, key, value) {
+  const text = existsSync(filePath) ? readFileSync(filePath, 'utf8') : ''
+  const lines = text ? text.split(/\r?\n/) : []
+  const line = `${key}=${stringifyDotEnvValue(value)}`
+  const keyPattern = new RegExp(`^\\s*${key}\\s*=`)
+  const index = lines.findIndex((item) => keyPattern.test(item))
+  if (index >= 0) {
+    lines[index] = line
+  } else {
+    lines.push(line)
+  }
+  const normalized = `${lines.join('\n').replace(/\n+$/g, '')}\n`
+  writeFileSync(filePath, normalized, 'utf8')
+}
+
 function resolveEnvPath() {
   if (app.isPackaged) {
     return path.join(process.resourcesPath, '.env')
@@ -69,6 +88,31 @@ function resolveServerEntry() {
     return path.join(process.resourcesPath, '.output', 'server', 'index.mjs')
   }
   return path.join(__dirname, '..', '.output', 'server', 'index.mjs')
+}
+
+function registerIpcHandlers() {
+  ipcMain.handle('env:get-debugbear-config', () => {
+    const envData = parseDotEnvFile(resolveEnvPath())
+    return {
+      apiKey: envData.DEBUGBEAR_API_KEY ?? '',
+      projectId: envData.DEBUGBEAR_PROJECT_ID ?? ''
+    }
+  })
+
+  ipcMain.handle('env:set-debugbear-config', (_event, payload) => {
+    const apiKey = typeof payload?.apiKey === 'string' ? payload.apiKey.trim() : ''
+    const projectId = typeof payload?.projectId === 'string' ? payload.projectId.trim() : ''
+    if (!apiKey) {
+      throw new Error('API Key 不能为空')
+    }
+    if (!/^\d+$/.test(projectId)) {
+      throw new Error('Project ID 必须为正整数')
+    }
+    const envPath = resolveEnvPath()
+    upsertDotEnvValue(envPath, 'DEBUGBEAR_API_KEY', apiKey)
+    upsertDotEnvValue(envPath, 'DEBUGBEAR_PROJECT_ID', projectId)
+    return { ok: true }
+  })
 }
 
 function startNuxtServer() {
@@ -168,7 +212,7 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
-      preload: path.join(__dirname, 'preload.mjs')
+      preload: path.join(__dirname, 'preload.cjs')
     }
   })
 
@@ -208,6 +252,7 @@ async function bootstrap() {
 
 app.whenReady().then(async () => {
   try {
+    registerIpcHandlers()
     await bootstrap()
   } catch (error) {
     dialog.showErrorBox('应用启动失败', error instanceof Error ? error.message : String(error))
